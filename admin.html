@@ -21,7 +21,7 @@ background:#081426;color:white;border:1px solid #354b69;
 border-radius:8px;font-size:15px
 }
 textarea{min-height:100px;resize:vertical}
-button{border:0;border-radius:8px;padding:12px 16px;margin:4px;background:#079fc9;color:white;font-weight:bold}
+button{border:0;border-radius:8px;padding:12px 16px;margin:4px;background:#079fc9;color:white;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.5}
 .secondary{background:#40536c}
 .danger{background:#d83c52}
@@ -34,6 +34,7 @@ button:disabled{opacity:.5}
 #mensagem,#loginMsg{padding:10px;color:#49d6ff}
 .erro{color:#ff7185!important}
 #preview{max-width:130px;max-height:180px;object-fit:cover;border-radius:8px}
+small{color:#aabbd0}
 @media(max-width:550px){
 .item{align-items:flex-start;flex-wrap:wrap}
 .actions button{padding:9px;font-size:12px}
@@ -86,12 +87,19 @@ button:disabled{opacity:.5}
 <input id="arquivoCapa" type="file" accept="image/*">
 <img id="preview" class="hidden" alt="Prévia da capa">
 
-<div id="areaTemporadas">
+<div id="areaFilme">
+<h2>🎬 Reprodução do filme</h2>
+<label>Link do vídeo (MP4 ou M3U8)</label>
+<input id="linkFilme" type="url" placeholder="https://site.com/video.mp4">
+<small>Informe um link direto de vídeo autorizado. O link pode terminar em .mp4 ou .m3u8.</small>
+</div>
+
+<div id="areaTemporadas" class="hidden">
 <h2>📺 Temporadas e episódios</h2>
-<p>Para séries e animes, coloque um episódio por linha:</p>
-<textarea id="episodios" placeholder="Temporada 1 | Episódio 1 | Primeiro episódio | https://link-autorizado
-Temporada 1 | Episódio 2 | Segundo episódio | https://link-autorizado
-Temporada 2 | Episódio 1 | Novo episódio | https://link-autorizado"></textarea>
+<p>Coloque um episódio por linha:</p>
+<textarea id="episodios" placeholder="Temporada 1 | Episódio 1 | Primeiro episódio | https://link-autorizado.mp4
+Temporada 1 | Episódio 2 | Segundo episódio | https://link-autorizado.mp4
+Temporada 2 | Episódio 1 | Novo episódio | https://link-autorizado.m3u8"></textarea>
 <p><small>Formato: Temporada | Episódio | Nome | Link autorizado. Os links são opcionais.</small></p>
 </div>
 
@@ -132,16 +140,16 @@ function mensagem(texto, erro=false){
   $("mensagem").classList.toggle("erro",erro);
 }
 
-$("categoria").addEventListener("change",()=>{
-  $("areaTemporadas").classList.toggle(
-    "hidden",
-    $("categoria").value === "filme"
-  );
-});
+function atualizarCategoria(){
+  const filme = $("categoria").value === "filme";
+  $("areaFilme").classList.toggle("hidden",!filme);
+  $("areaTemporadas").classList.toggle("hidden",filme);
+}
+
+$("categoria").addEventListener("change",atualizarCategoria);
 
 $("arquivoCapa").addEventListener("change",async()=>{
   const arquivo = $("arquivoCapa").files[0];
-
   if(!arquivo) return;
 
   if(!arquivo.type.startsWith("image/")){
@@ -262,7 +270,6 @@ async function carregar(){
     const dados=await resposta.json();
     const busca=$("busca").value.trim().toLowerCase();
     const filtro=$("filtro").value;
-
     const itens=Array.isArray(dados)?dados:[];
 
     const filtrados=itens.filter(item=>{
@@ -336,6 +343,17 @@ function mostrarLista(itens){
   });
 }
 
+function validarLink(link){
+  if(!link) return true;
+
+  try{
+    const url=new URL(link);
+    return url.protocol==="https:"||url.protocol==="http:";
+  }catch(e){
+    return false;
+  }
+}
+
 function lerTemporadas(texto){
   const mapa=new Map();
 
@@ -357,6 +375,11 @@ function lerTemporadas(texto){
 
     const nT=Number(numeroTemporada[0]);
     const nE=Number(numeroEpisodio[0]);
+    const link=partes[3]||"";
+
+    if(!validarLink(link)){
+      throw new Error("Link inválido no episódio "+nE+".");
+    }
 
     if(!mapa.has(nT)){
       mapa.set(nT,{numero:nT,episodios:[]});
@@ -365,7 +388,7 @@ function lerTemporadas(texto){
     mapa.get(nT).episodios.push({
       numero:nE,
       titulo:partes[2],
-      link:partes[3]||""
+      link:link
     });
   });
 
@@ -385,6 +408,11 @@ function editarItem(item){
 
   const temporadas=Array.isArray(item.temporadas)?item.temporadas:[];
 
+  const episodioFilme=temporadas[0]?.episodios?.[0];
+
+  $("linkFilme").value=
+    item.categoria==="filme"?(episodioFilme?.link||""):"";
+
   $("episodios").value=temporadas.flatMap(t=>
     (t.episodios||[]).map(e=>
       "Temporada "+t.numero+
@@ -394,21 +422,19 @@ function editarItem(item){
     )
   ).join("\n");
 
-  $("areaTemporadas").classList.toggle(
-    "hidden",item.categoria==="filme"
-  );
+  atualizarCategoria();
 
   $("formTitulo").textContent="✏️ Editar conteúdo";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
 function limpar(){
-  ["id","titulo","ano","descricao","capa","episodios"].forEach(id=>{
+  ["id","titulo","ano","descricao","capa","episodios","linkFilme"].forEach(id=>{
     $(id).value="";
   });
 
   $("categoria").value="filme";
-  $("areaTemporadas").classList.add("hidden");
+  atualizarCategoria();
   $("arquivoCapa").value="";
   $("preview").src="";
   $("preview").classList.add("hidden");
@@ -431,10 +457,26 @@ async function salvar(){
 
   try{
     const categoria=$("categoria").value;
+    let temporadas;
 
-    const temporadas=categoria==="filme"
-      ?[]
-      :lerTemporadas($("episodios").value);
+    if(categoria==="filme"){
+      const link=$("linkFilme").value.trim();
+
+      if(link&&!validarLink(link)){
+        throw new Error("Informe um link de vídeo HTTP ou HTTPS válido.");
+      }
+
+      temporadas=link?[{
+        numero:1,
+        episodios:[{
+          numero:1,
+          titulo:"Assistir filme",
+          link:link
+        }]
+      }]:[];
+    }else{
+      temporadas=lerTemporadas($("episodios").value);
+    }
 
     const dados={
       titulo,
@@ -505,6 +547,8 @@ async function excluirItem(id){
     mensagem(e.message,true);
   }
 }
+
+atualizarCategoria();
 </script>
 </body>
 </html>
