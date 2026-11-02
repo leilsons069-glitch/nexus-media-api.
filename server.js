@@ -3,280 +3,388 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NEXUS MEDIA - Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS MEDIA - Administração</title>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#090d18;color:#fff;font-family:Arial,sans-serif}
-header{padding:22px;background:#111a2b;border-bottom:1px solid #26344c}
-header h1{margin:0;color:#55d6ff;letter-spacing:2px}
-header p{color:#9aabc4}
-main{max-width:950px;margin:25px auto;padding:15px}
-.card{background:#121c2e;border:1px solid #263852;border-radius:15px;padding:20px;margin-bottom:18px}
-h2{margin-top:0;color:#55d6ff}
-input,textarea,select{width:100%;padding:13px;margin:7px 0 13px;background:#091322;color:white;border:1px solid #344763;border-radius:8px;font-size:15px}
-textarea{min-height:90px}
-button{padding:12px 17px;border:0;border-radius:8px;background:#16a9d5;color:white;font-weight:bold;margin:4px}
-.danger{background:#d83d52}
-.secondary{background:#344763}
-.hidden{display:none}
-.item{display:flex;gap:14px;align-items:center;border-bottom:1px solid #293950;padding:13px 0}
-.item img{width:65px;height:90px;object-fit:cover;border-radius:7px}
-.item-info{flex:1;min-width:0}
-.item-info strong{display:block;overflow-wrap:anywhere}
-.item-info small{color:#9aabc4}
-.actions{display:flex;flex-wrap:wrap}
-#mensagem{padding:10px;color:#55d6ff}
-@media(max-width:550px){.item{align-items:flex-start}.actions button{padding:9px;font-size:12px}}
+body{
+  margin:0;
+  padding:20px;
+  background:#0b1020;
+  color:#fff;
+  font-family:Arial,sans-serif;
+}
+.container{max-width:900px;margin:auto}
+h1{color:#7c8cff;text-align:center}
+h2{color:#aab5ff}
+.card{
+  background:#151d32;
+  padding:20px;
+  border-radius:14px;
+  margin:18px 0;
+}
+input,select,textarea,button{
+  width:100%;
+  padding:13px;
+  margin:7px 0;
+  border:0;
+  border-radius:8px;
+  font-size:15px;
+}
+input,select,textarea{
+  background:#25304b;
+  color:white;
+}
+button{
+  background:#5865f2;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+button.danger{background:#d93650}
+button.secondary{background:#394765}
+.hidden{display:none!important}
+.item{
+  background:#202b45;
+  padding:14px;
+  border-radius:10px;
+  margin:10px 0;
+}
+.item strong{color:#aab5ff}
+.item button{width:auto;margin-right:5px}
+.msg{color:#ff9c9c;min-height:20px}
+small{color:#aeb9d1}
 </style>
 </head>
+
 <body>
-<header>
+<div class="container">
+
 <h1>NEXUS MEDIA</h1>
-<p>Painel de gerenciamento de conteúdo</p>
-</header>
-<main>
+<p style="text-align:center">Painel administrativo</p>
+
+<!-- LOGIN -->
 <div class="card" id="login">
-<h2>🔐 Acesso administrativo</h2>
-<p>Digite sua senha de administrador.</p>
-<input type="password" id="token" placeholder="Senha de administrador">
-<button onclick="entrar()">Entrar no painel</button>
-<div id="loginMsg"></div>
+  <h2>Entrar no painel</h2>
+  <input
+    type="password"
+    id="token"
+    placeholder="Senha de administrador"
+    autocomplete="current-password"
+  >
+  <button id="btnEntrar" onclick="entrar()">ENTRAR</button>
+  <p class="msg" id="loginMsg"></p>
 </div>
 
+<!-- PAINEL -->
 <div id="painel" class="hidden">
-<div class="card">
-<h2 id="formTitulo">＋ Adicionar conteúdo</h2>
-<input type="hidden" id="id">
-<label>Título</label>
-<input id="titulo" placeholder="Nome do filme, série ou anime">
-<label>Categoria</label>
-<select id="categoria">
-<option value="filme">Filme</option>
-<option value="serie">Série</option>
-<option value="anime">Anime</option>
-</select>
-<label>Ano</label>
-<input id="ano" type="number" placeholder="2026">
-<label>Endereço da imagem da capa</label>
-<input id="capa" type="url" placeholder="https://site.com/capa.jpg">
-<label>Descrição</label>
-<textarea id="descricao" placeholder="Descrição do conteúdo..."></textarea>
-<button onclick="salvar()">Salvar conteúdo</button>
-<button class="secondary" onclick="limpar()">Limpar</button>
+
+  <div class="card">
+    <h2>Adicionar conteúdo</h2>
+
+    <input id="titulo" placeholder="Título do conteúdo">
+
+    <select id="categoria">
+      <option value="filme">Filme</option>
+      <option value="serie">Série</option>
+      <option value="anime">Anime</option>
+    </select>
+
+    <input id="ano" type="number" placeholder="Ano de lançamento">
+
+    <input id="capa" placeholder="URL da imagem da capa">
+
+    <textarea id="descricao" rows="4"
+      placeholder="Descrição do conteúdo"></textarea>
+
+    <button onclick="salvar()">SALVAR CONTEÚDO</button>
+    <button class="secondary hidden" id="cancelar"
+      onclick="cancelarEdicao()">CANCELAR EDIÇÃO</button>
+
+    <p class="msg" id="formMsg"></p>
+  </div>
+
+  <div class="card">
+    <h2>Catálogo</h2>
+    <input id="pesquisa" placeholder="Pesquisar conteúdo..."
+      oninput="filtrar()">
+    <button class="secondary" onclick="carregar()">ATUALIZAR LISTA</button>
+    <div id="lista"></div>
+  </div>
+
+  <button class="danger" onclick="sair()">SAIR DO PAINEL</button>
 </div>
-<div class="card">
-<h2>🎬 Catálogo</h2>
-<input id="busca" placeholder="Buscar conteúdo..." oninput="carregar()">
-<select id="filtro" onchange="carregar()">
-<option value="">Todas as categorias</option>
-<option value="filme">Filmes</option>
-<option value="serie">Séries</option>
-<option value="anime">Animes</option>
-</select>
-<div id="lista">Carregando catálogo...</div>
+
 </div>
-<button class="danger" onclick="sair()">Sair do painel</button>
-</div>
-<div id="mensagem"></div>
-</main>
 
 <script>
-let token="";
+"use strict";
 
-function mensagem(texto){
- document.getElementById("mensagem").textContent=texto;
-}
+let token = "";
+let catalogo = [];
+let editandoId = null;
 
-async function requisicao(url,opcoes={}){
- opcoes.headers={
-  ...(opcoes.headers||{}),
-  "Authorization":"Bearer "+token
- };
- return fetch(url,opcoes);
-}
+const $ = id => document.getElementById(id);
 
-async function entrar(){
- const valor=document.getElementById("token").value.trim();
- const msg=document.getElementById("loginMsg");
+async function requisicao(url, opcoes = {}) {
+  const cabecalhos = {
+    ...(opcoes.headers || {}),
+    "Authorization": "Bearer " + token
+  };
 
- if(!valor){
-  msg.textContent="Digite sua senha.";
-  return;
- }
-
- token=valor;
- msg.textContent="Verificando acesso...";
-
- try{
-  const resposta=await requisicao("/api/admin/verificar");
-
-  if(!resposta.ok){
-   token="";
-   msg.textContent=resposta.status===401
-    ?"Senha incorreta."
-    :"Erro ao verificar acesso. Tente novamente.";
-   return;
+  if (opcoes.body) {
+    cabecalhos["Content-Type"] = "application/json";
   }
 
-  document.getElementById("login").classList.add("hidden");
-  document.getElementById("painel").classList.remove("hidden");
-  msg.textContent="";
-  carregar();
- }catch(error){
-  token="";
-  msg.textContent="Não foi possível conectar ao servidor.";
- }
+  return fetch(url, {
+    ...opcoes,
+    headers: cabecalhos
+  });
 }
 
-function sair(){
- token="";
- document.getElementById("painel").classList.add("hidden");
- document.getElementById("login").classList.remove("hidden");
- document.getElementById("token").value="";
+async function entrar() {
+  const valor = $("token").value.trim();
+  const msg = $("loginMsg");
+  const botao = $("btnEntrar");
+
+  if (!valor) {
+    msg.textContent = "Digite sua senha.";
+    return;
+  }
+
+  botao.disabled = true;
+  msg.textContent = "Verificando acesso...";
+
+  try {
+    const resposta = await fetch("/api/admin/verificar", {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + valor
+      },
+      cache: "no-store"
+    });
+
+    if (!resposta.ok) {
+      msg.textContent =
+        resposta.status === 401
+          ? "Senha incorreta."
+          : "Não foi possível verificar o acesso.";
+
+      return;
+    }
+
+    const dados = await resposta.json();
+
+    if (dados.autenticado !== true) {
+      msg.textContent = "Resposta de autenticação inválida.";
+      return;
+    }
+
+    token = valor;
+
+    $("login").classList.add("hidden");
+    $("painel").classList.remove("hidden");
+
+    msg.textContent = "";
+    await carregar();
+
+  } catch (erro) {
+    msg.textContent = "Erro ao conectar ao servidor.";
+  } finally {
+    botao.disabled = false;
+  }
 }
 
-async function carregar(){
- try{
-  const busca=document.getElementById("busca").value;
-  const categoria=document.getElementById("filtro").value;
-  const params=new URLSearchParams();
-  if(busca)params.set("busca",busca);
-  if(categoria)params.set("categoria",categoria);
+function sair() {
+  token = "";
+  catalogo = [];
+  editandoId = null;
 
-  const resposta=await fetch("/api/catalogo?"+params.toString());
-  if(!resposta.ok)throw new Error("Erro ao carregar catálogo.");
-
-  const dados=await resposta.json();
-  mostrarLista(dados.resultados||[]);
- }catch(error){
-  mensagem(error.message);
- }
+  $("token").value = "";
+  $("login").classList.remove("hidden");
+  $("painel").classList.add("hidden");
+  $("lista").innerHTML = "";
 }
 
-function mostrarLista(itens){
- const lista=document.getElementById("lista");
- lista.innerHTML="";
+async function carregar() {
+  $("lista").innerHTML = "Carregando catálogo...";
 
- if(!itens.length){
-  lista.textContent="Nenhum conteúdo encontrado.";
-  return;
- }
+  try {
+    const resposta = await requisicao("/api/catalogo");
 
- itens.forEach(item=>{
-  const div=document.createElement("div");
-  div.className="item";
+    if (resposta.status === 401) {
+      alert("Sua autorização expirou. Entre novamente.");
+      sair();
+      return;
+    }
 
-  const img=document.createElement("img");
-  img.src=item.capa||"";
-  img.alt="Capa";
-  img.onerror=()=>img.style.display="none";
+    if (!resposta.ok) {
+      $("lista").textContent = "Erro ao carregar catálogo.";
+      return;
+    }
 
-  const info=document.createElement("div");
-  info.className="item-info";
+    const dados = await resposta.json();
 
-  const titulo=document.createElement("strong");
-  titulo.textContent=item.titulo;
+    catalogo = Array.isArray(dados) ? dados : [];
+    filtrar();
 
-  const detalhe=document.createElement("small");
-  detalhe.textContent=item.categoria+" • "+(item.ano||"Ano não informado");
-
-  info.append(titulo,detalhe);
-
-  const acoes=document.createElement("div");
-  acoes.className="actions";
-
-  const editar=document.createElement("button");
-  editar.className="secondary";
-  editar.textContent="Editar";
-  editar.onclick=()=>editarItem(item);
-
-  const excluir=document.createElement("button");
-  excluir.className="danger";
-  excluir.textContent="Excluir";
-  excluir.onclick=()=>excluirItem(item.id);
-
-  acoes.append(editar,excluir);
-  div.append(img,info,acoes);
-  lista.append(div);
- });
+  } catch (erro) {
+    $("lista").textContent = "Não foi possível conectar ao servidor.";
+  }
 }
 
-async function salvar(){
- const id=document.getElementById("id").value;
- const titulo=document.getElementById("titulo").value.trim();
- const categoria=document.getElementById("categoria").value;
- const ano=document.getElementById("ano").value;
- const capa=document.getElementById("capa").value.trim();
- const descricao=document.getElementById("descricao").value.trim();
+function filtrar() {
+  const termo = $("pesquisa").value.toLowerCase();
 
- if(!titulo){
-  mensagem("Digite o título.");
-  return;
- }
-
- const dados={
-  titulo,categoria,
-  ano:ano?Number(ano):null,
-  capa,descricao
- };
-
- try{
-  const resposta=await requisicao(
-   id?"/api/catalogo/"+id:"/api/catalogo",
-   {
-    method:id?"PUT":"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(dados)
-   }
+  const encontrados = catalogo.filter(item =>
+    String(item.titulo || "").toLowerCase().includes(termo)
   );
 
-  if(!resposta.ok){
-   const erro=await resposta.json();
-   throw new Error(erro.erro||"Erro ao salvar.");
+  mostrar(encontrados);
+}
+
+function mostrar(itens) {
+  const lista = $("lista");
+  lista.innerHTML = "";
+
+  if (!itens.length) {
+    lista.textContent = "Nenhum conteúdo encontrado.";
+    return;
   }
 
-  mensagem("Conteúdo salvo com sucesso!");
-  limpar();
-  carregar();
- }catch(error){
-  mensagem(error.message);
- }
+  itens.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "item";
+
+    const titulo = document.createElement("strong");
+    titulo.textContent = item.titulo || "Sem título";
+
+    const info = document.createElement("p");
+    info.textContent =
+      (item.categoria || "") + " • " + (item.ano || "");
+
+    const editar = document.createElement("button");
+    editar.textContent = "EDITAR";
+    editar.onclick = () => editarItem(item);
+
+    const excluir = document.createElement("button");
+    excluir.textContent = "EXCLUIR";
+    excluir.className = "danger";
+    excluir.onclick = () => excluirItem(item.id);
+
+    div.append(titulo, info, editar, excluir);
+    lista.appendChild(div);
+  });
 }
 
-function editarItem(item){
- document.getElementById("id").value=item.id;
- document.getElementById("titulo").value=item.titulo||"";
- document.getElementById("categoria").value=item.categoria||"filme";
- document.getElementById("ano").value=item.ano||"";
- document.getElementById("capa").value=item.capa||"";
- document.getElementById("descricao").value=item.descricao||"";
- document.getElementById("formTitulo").textContent="✏️ Editar conteúdo";
- window.scrollTo({top:0,behavior:"smooth"});
+function limparFormulario() {
+  $("titulo").value = "";
+  $("categoria").value = "filme";
+  $("ano").value = "";
+  $("capa").value = "";
+  $("descricao").value = "";
 }
 
-async function excluirItem(id){
- if(!confirm("Deseja realmente excluir este conteúdo?"))return;
+function editarItem(item) {
+  editandoId = item.id;
 
- try{
-  const resposta=await requisicao("/api/catalogo/"+id,{method:"DELETE"});
-  if(!resposta.ok){
-   const erro=await resposta.json();
-   throw new Error(erro.erro||"Erro ao excluir.");
+  $("titulo").value = item.titulo || "";
+  $("categoria").value = item.categoria || "filme";
+  $("ano").value = item.ano || "";
+  $("capa").value = item.capa || "";
+  $("descricao").value = item.descricao || "";
+
+  $("cancelar").classList.remove("hidden");
+  $("formMsg").textContent = "Editando conteúdo.";
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+
+function cancelarEdicao() {
+  editandoId = null;
+  limparFormulario();
+  $("cancelar").classList.add("hidden");
+  $("formMsg").textContent = "";
+}
+
+async function salvar() {
+  const titulo = $("titulo").value.trim();
+
+  if (!titulo) {
+    $("formMsg").textContent = "Informe o título.";
+    return;
   }
-  mensagem("Conteúdo excluído.");
-  carregar();
- }catch(error){
-  mensagem(error.message);
- }
+
+  const conteudo = {
+    titulo,
+    categoria: $("categoria").value,
+    ano: $("ano").value ? Number($("ano").value) : null,
+    capa: $("capa").value.trim(),
+    descricao: $("descricao").value.trim()
+  };
+
+  const editando = editandoId !== null;
+
+  try {
+    const resposta = await requisicao(
+      editando
+        ? "/api/catalogo/" + encodeURIComponent(editandoId)
+        : "/api/catalogo",
+      {
+        method: editando ? "PUT" : "POST",
+        body: JSON.stringify(conteudo)
+      }
+    );
+
+    if (resposta.status === 401) {
+      alert("Acesso não autorizado.");
+      sair();
+      return;
+    }
+
+    if (!resposta.ok) {
+      $("formMsg").textContent = "Erro ao salvar conteúdo.";
+      return;
+    }
+
+    $("formMsg").textContent = "Conteúdo salvo com sucesso!";
+    cancelarEdicao();
+    await carregar();
+
+  } catch (erro) {
+    $("formMsg").textContent = "Erro de conexão.";
+  }
 }
 
-function limpar(){
- ["id","titulo","ano","capa","descricao"].forEach(id=>{
-  document.getElementById(id).value="";
- });
- document.getElementById("formTitulo").textContent="＋ Adicionar conteúdo";
+async function excluirItem(id) {
+  if (!confirm("Deseja realmente excluir este conteúdo?")) {
+    return;
+  }
+
+  try {
+    const resposta = await requisicao(
+      "/api/catalogo/" + encodeURIComponent(id),
+      { method: "DELETE" }
+    );
+
+    if (resposta.status === 401) {
+      alert("Acesso não autorizado.");
+      sair();
+      return;
+    }
+
+    if (!resposta.ok) {
+      alert("Não foi possível excluir.");
+      return;
+    }
+
+    await carregar();
+
+  } catch (erro) {
+    alert("Erro de conexão.");
+  }
 }
 </script>
+
 </body>
 </html>
