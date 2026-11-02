@@ -22,7 +22,7 @@ body{
   color:var(--text);
   font-family:Arial,sans-serif;
 }
-button,input{font:inherit}
+button,input,select{font:inherit}
 button{cursor:pointer}
 
 header{
@@ -75,15 +75,8 @@ nav a{
   letter-spacing:3px;
   font-weight:bold;
 }
-.hero h1{
-  font-size:clamp(36px,7vw,68px);
-  margin:15px 0;
-}
-.hero p{
-  color:#ddd;
-  line-height:1.7;
-  max-width:540px;
-}
+.hero h1{font-size:clamp(36px,7vw,68px);margin:15px 0}
+.hero p{color:#ddd;line-height:1.7;max-width:540px}
 .hero-buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 .primary,.secondary{
   border:0;
@@ -95,12 +88,7 @@ nav a{
 .secondary{background:#343640;color:white}
 
 main{padding:25px 5% 60px}
-.tools{
-  display:flex;
-  flex-wrap:wrap;
-  gap:12px;
-  margin-bottom:28px;
-}
+.tools{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px}
 .search{
   flex:1;
   min-width:200px;
@@ -119,10 +107,7 @@ main{padding:25px 5% 60px}
   border-radius:20px;
   padding:10px 16px;
 }
-.filters button.active{
-  background:var(--red);
-  color:white;
-}
+.filters button.active{background:var(--red);color:white}
 .section-title{font-size:21px;margin:28px 0 17px}
 .row-catalog{
   display:flex;
@@ -132,10 +117,7 @@ main{padding:25px 5% 60px}
   scroll-behavior:smooth;
 }
 .row-catalog::-webkit-scrollbar{height:5px}
-.row-catalog::-webkit-scrollbar-thumb{
-  background:#444;
-  border-radius:10px;
-}
+.row-catalog::-webkit-scrollbar-thumb{background:#444;border-radius:10px}
 .movie{
   flex:0 0 155px;
   min-width:0;
@@ -159,12 +141,8 @@ main{padding:25px 5% 60px}
   text-overflow:ellipsis;
 }
 .movie small{color:var(--muted)}
-.status{
-  text-align:center;
-  padding:40px 15px;
-  color:var(--muted);
-  width:100%;
-}
+.status{text-align:center;padding:40px 15px;color:var(--muted);width:100%}
+
 footer{
   text-align:center;
   padding:30px;
@@ -184,7 +162,7 @@ footer{
 }
 .modal.show{display:block}
 .modal-box{
-  max-width:850px;
+  max-width:900px;
   margin:15px auto;
   background:var(--panel);
   border:1px solid #30323c;
@@ -209,6 +187,7 @@ footer{
   font-size:20px;
 }
 .modal-content p{color:#c1c2ca;line-height:1.6}
+
 .player-area{
   margin:20px 0;
   background:#000;
@@ -217,9 +196,50 @@ footer{
 }
 .player-area video{
   width:100%;
-  max-height:500px;
+  max-height:520px;
   display:block;
   background:#000;
+}
+.player-controls{
+  background:#11131b;
+  padding:12px;
+}
+.progress-line{width:100%;margin-bottom:10px}
+.progress-line input{
+  width:100%;
+  accent-color:#e50935;
+  cursor:pointer;
+}
+.control-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.control-row button{
+  background:#292b35;
+  color:white;
+  border:0;
+  border-radius:5px;
+  padding:9px 12px;
+}
+.control-row button:active{background:#e50935}
+#timeDisplay{color:#ddd;font-size:12px}
+.volume-control{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:white;
+}
+.volume-control input{width:65px;accent-color:#e50935}
+#qualitySelect{
+  background:#292b35;
+  color:white;
+  border:1px solid #444;
+  border-radius:5px;
+  padding:8px;
+  max-width:120px;
 }
 .player-message{
   color:#bbb;
@@ -259,6 +279,7 @@ footer{
   font-size:13px;
   line-height:1.5;
 }
+
 @media(max-width:600px){
   header{padding:0 4%}
   .logo{font-size:19px}
@@ -269,6 +290,8 @@ footer{
   .movie{flex-basis:135px}
   .modal-cover{height:175px}
   .modal-content{padding:15px}
+  .control-row{justify-content:center}
+  #timeDisplay{width:100%;text-align:center}
 }
 </style>
 </head>
@@ -293,23 +316,17 @@ footer{
       Escolha seu próximo conteúdo e aproveite.
     </p>
     <div class="hero-buttons">
-      <button class="primary" id="heroWatch" onclick="playFeatured()">
-        ▶ ASSISTIR
-      </button>
-      <button class="secondary" onclick="scrollCatalog()">
-        EXPLORAR CATÁLOGO
-      </button>
+      <button class="primary" id="heroWatch" onclick="playFeatured()">▶ ASSISTIR</button>
+      <button class="secondary" onclick="scrollCatalog()">EXPLORAR CATÁLOGO</button>
     </div>
   </div>
 </section>
 
 <main id="catalogo">
-
   <div class="tools">
     <input id="search" class="search" type="search"
       placeholder="Pesquisar filmes, séries e animes..."
       oninput="renderCatalog()">
-
     <div class="filters">
       <button class="active" onclick="setFilter('todos',this)">Todos</button>
       <button onclick="setFilter('filme',this)">Filmes</button>
@@ -317,34 +334,45 @@ footer{
       <button onclick="setFilter('anime',this)">Animes</button>
     </div>
   </div>
-
-  <div id="catalog">
-    <div class="status">Carregando catálogo...</div>
-  </div>
-
+  <div id="catalog"><div class="status">Carregando catálogo...</div></div>
 </main>
 
 <footer>
   NEXUS MEDIA © <span id="year"></span>
-  <br><br>
-  Sua plataforma de entretenimento.
+  <br><br>Sua plataforma de entretenimento.
 </footer>
 
 <div class="modal" id="detailsModal" onclick="outsideClose(event)">
   <div class="modal-box">
-
     <img class="modal-cover" id="detailCover" src="" alt="Capa">
-
     <div class="modal-content">
       <button class="close" onclick="closeDetails()">×</button>
-
       <h2 id="detailTitle"></h2>
       <small id="detailMeta"></small>
       <p id="detailDescription"></p>
 
       <div class="player-area" id="playerArea" style="display:none">
-        <video id="videoPlayer" controls playsinline
-          preload="metadata"></video>
+        <video id="videoPlayer" playsinline preload="metadata"></video>
+
+        <div class="player-controls">
+          <div class="progress-line">
+            <input id="seekBar" type="range" min="0" max="1000" value="0">
+          </div>
+          <div class="control-row">
+            <button id="playPause" type="button">▶</button>
+            <span id="timeDisplay">00:00 / 00:00</span>
+            <button id="backward" type="button">↶ 10s</button>
+            <button id="forward" type="button">10s ↷</button>
+            <label class="volume-control">
+              🔊 <input id="volumeBar" type="range" min="0" max="1" step="0.05" value="1">
+            </label>
+            <select id="qualitySelect" aria-label="Qualidade">
+              <option value="-1">Automática</option>
+            </select>
+            <button id="fullscreenButton" type="button">⛶</button>
+          </div>
+        </div>
+
         <div class="player-message" id="playerMessage">
           Reprodução de vídeo autorizado.
         </div>
@@ -361,22 +389,19 @@ footer{
 "use strict";
 
 const API="/api/catalogo";
-
 let catalog=[];
 let currentFilter="todos";
 let featuredItem=null;
 let hlsInstance=null;
+let currentVideoKey="";
 
 const $=id=>document.getElementById(id);
-
 $("year").textContent=new Date().getFullYear();
 
 function safeURL(value){
   try{
     const url=new URL(value,window.location.origin);
-    if(url.protocol==="https:"||url.protocol==="http:"){
-      return url.href;
-    }
+    if(url.protocol==="https:"||url.protocol==="http:")return url.href;
   }catch(e){}
   return "";
 }
@@ -384,18 +409,12 @@ function safeURL(value){
 async function loadCatalog(){
   try{
     const response=await fetch(API,{cache:"no-store"});
-
     if(!response.ok)throw new Error("Erro na API");
-
     const data=await response.json();
-
     if(!Array.isArray(data))throw new Error("Catálogo inválido");
-
     catalog=data;
-
     updateHero();
     renderCatalog();
-
   }catch(e){
     $("catalog").innerHTML=
       '<div class="status">Não foi possível carregar o catálogo. Tente novamente.</div>';
@@ -419,25 +438,21 @@ function getVideoLink(episode){
 
 function updateHero(){
   featuredItem=catalog[0]||null;
-
   if(!featuredItem)return;
 
   $("heroTitle").textContent=featuredItem.titulo||"NEXUS MEDIA";
-
   $("heroDescription").textContent=
     featuredItem.descricao||"Descubra seu próximo filme ou série.";
 
   const cover=safeURL(featuredItem.capa);
-
   if(cover){
     $("hero").style.backgroundImage=
       `linear-gradient(90deg,#08090d 5%,rgba(8,9,13,.85) 55%,rgba(8,9,13,.2)),linear-gradient(0deg,#08090d,transparent 45%),url("${cover}")`;
   }
 
   const episode=getEpisodes(featuredItem)[0];
-  const link=getVideoLink(episode);
-
-  $("heroWatch").style.display=safeURL(link)?"inline-block":"none";
+  $("heroWatch").style.display=
+    safeURL(getVideoLink(episode))?"inline-block":"none";
 }
 
 function playFeatured(){
@@ -446,12 +461,9 @@ function playFeatured(){
 
 function setFilter(filter,button){
   currentFilter=filter;
-
   document.querySelectorAll(".filters button")
     .forEach(btn=>btn.classList.remove("active"));
-
   button.classList.add("active");
-
   renderCatalog();
 }
 
@@ -471,8 +483,7 @@ function createMovieCard(item){
   title.textContent=item.titulo||"Sem título";
 
   const meta=document.createElement("small");
-  meta.textContent=
-    [item.ano,item.categoria].filter(Boolean).join(" • ");
+  meta.textContent=[item.ano,item.categoria].filter(Boolean).join(" • ");
 
   card.append(img,title,meta);
   return card;
@@ -484,19 +495,15 @@ function renderCatalog(){
 
   const search=$("search").value.toLowerCase().trim();
 
-  let filtered=catalog.filter(item=>{
+  const filtered=catalog.filter(item=>{
     const category=String(item.categoria||"").toLowerCase();
     const title=String(item.titulo||"").toLowerCase();
-
-    return (
-      (currentFilter==="todos"||category===currentFilter) &&
-      title.includes(search)
-    );
+    return (currentFilter==="todos"||category===currentFilter)
+      &&title.includes(search);
   });
 
   if(!filtered.length){
-    container.innerHTML=
-      '<div class="status">Nenhum título encontrado.</div>';
+    container.innerHTML='<div class="status">Nenhum título encontrado.</div>';
     return;
   }
 
@@ -505,9 +512,9 @@ function renderCatalog(){
     const heading=document.createElement("h2");
     heading.className="section-title";
     heading.textContent="Resultados";
+
     const row=document.createElement("div");
     row.className="row-catalog";
-
     filtered.forEach(item=>row.appendChild(createMovieCard(item)));
 
     section.append(heading,row);
@@ -515,17 +522,14 @@ function renderCatalog(){
     return;
   }
 
-  const groups=[
+  [
     {key:"filme",title:"Filmes"},
     {key:"serie",title:"Séries"},
     {key:"anime",title:"Animes"}
-  ];
-
-  groups.forEach(group=>{
+  ].forEach(group=>{
     const items=filtered.filter(item=>
       String(item.categoria||"").toLowerCase()===group.key
     );
-
     if(!items.length)return;
 
     const section=document.createElement("section");
@@ -535,7 +539,6 @@ function renderCatalog(){
 
     const row=document.createElement("div");
     row.className="row-catalog";
-
     items.forEach(item=>row.appendChild(createMovieCard(item)));
 
     section.append(heading,row);
@@ -543,9 +546,53 @@ function renderCatalog(){
   });
 }
 
-function stopPlayer(){
-  const video=$("videoPlayer");
+function formatTime(seconds){
+  if(!Number.isFinite(seconds))return "00:00";
+  const min=Math.floor(seconds/60);
+  const sec=Math.floor(seconds%60);
+  return String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+}
 
+function saveProgress(){
+  const video=$("videoPlayer");
+  if(!currentVideoKey||!Number.isFinite(video.currentTime))return;
+
+  if(video.currentTime>5&&video.duration){
+    localStorage.setItem("nexus_progress_"+currentVideoKey,
+      JSON.stringify({time:video.currentTime,duration:video.duration}));
+  }
+}
+
+function updateProgress(){
+  const video=$("videoPlayer");
+  if(!video.duration||!Number.isFinite(video.duration))return;
+
+  $("seekBar").value=(video.currentTime/video.duration)*1000;
+  $("timeDisplay").textContent=
+    formatTime(video.currentTime)+" / "+formatTime(video.duration);
+}
+
+function loadQualities(){
+  const select=$("qualitySelect");
+  select.innerHTML='<option value="-1">Automática</option>';
+  if(!hlsInstance)return;
+
+  const levels=hlsInstance.levels;
+  const heights=[...new Set(levels.map(level=>level.height).filter(Boolean))]
+    .sort((a,b)=>b-a);
+
+  heights.forEach(height=>{
+    const option=document.createElement("option");
+    option.value=String(levels.findIndex(level=>level.height===height));
+    option.textContent=height+"p";
+    select.appendChild(option);
+  });
+}
+
+function stopPlayer(){
+  saveProgress();
+
+  const video=$("videoPlayer");
   if(hlsInstance){
     hlsInstance.destroy();
     hlsInstance=null;
@@ -555,12 +602,12 @@ function stopPlayer(){
   video.removeAttribute("src");
   video.load();
 
+  currentVideoKey="";
   $("playerArea").style.display="none";
 }
 
 function playVideo(rawURL){
   const url=safeURL(rawURL);
-
   if(!url){
     alert("Link de vídeo inválido.");
     return;
@@ -571,10 +618,29 @@ function playVideo(rawURL){
   const video=$("videoPlayer");
   const message=$("playerMessage");
 
+  currentVideoKey=url;
   $("playerArea").style.display="block";
   message.textContent="Carregando vídeo...";
+  $("seekBar").value=0;
+  $("timeDisplay").textContent="00:00 / 00:00";
+  $("qualitySelect").innerHTML='<option value="-1">Automática</option>';
+
+  const saved=localStorage.getItem("nexus_progress_"+currentVideoKey);
+
+  function restoreProgress(){
+    if(!saved)return;
+    try{
+      const progress=JSON.parse(saved);
+      if(progress.time>5&&progress.time<video.duration-5){
+        video.currentTime=progress.time;
+        message.textContent="Progresso anterior restaurado.";
+      }
+    }catch(e){}
+  }
 
   const isHLS=/\.m3u8($|\?)/i.test(url);
+
+  video.addEventListener("loadedmetadata",restoreProgress,{once:true});
 
   if(isHLS&&window.Hls&&Hls.isSupported()){
     hlsInstance=new Hls();
@@ -582,40 +648,97 @@ function playVideo(rawURL){
     hlsInstance.attachMedia(video);
 
     hlsInstance.on(Hls.Events.MANIFEST_PARSED,()=>{
+      loadQualities();
       message.textContent="Vídeo pronto para reprodução.";
       video.play().catch(()=>{});
     });
 
     hlsInstance.on(Hls.Events.ERROR,(event,data)=>{
       if(data.fatal){
-        message.textContent=
-          "Não foi possível reproduzir. Confira o link e as permissões do vídeo.";
+        message.textContent="Falha ao reproduzir. Confira o link do vídeo.";
       }
     });
-
   }else{
     video.src=url;
-
     video.addEventListener("loadedmetadata",()=>{
       message.textContent="Vídeo pronto para reprodução.";
+      video.play().catch(()=>{});
     },{once:true});
 
     video.addEventListener("error",()=>{
-      message.textContent=
-        "Falha na reprodução. Confira o link do vídeo.";
+      message.textContent="Falha na reprodução. Confira o link.";
     },{once:true});
-
-    if(isHLS){
-      message.textContent=
-        "Seu navegador pode não oferecer suporte a este formato HLS.";
-    }
   }
 
-  $("playerArea").scrollIntoView({
-    behavior:"smooth",
-    block:"center"
-  });
+  $("playerArea").scrollIntoView({behavior:"smooth",block:"center"});
 }
+
+$("playPause").onclick=()=>{
+  const video=$("videoPlayer");
+  if(video.paused)video.play().catch(()=>{});
+  else video.pause();
+};
+
+$("videoPlayer").addEventListener("play",()=>{
+  $("playPause").textContent="❚❚";
+});
+
+$("videoPlayer").addEventListener("pause",()=>{
+  $("playPause").textContent="▶";
+});
+
+$("videoPlayer").addEventListener("timeupdate",()=>{
+  updateProgress();
+  saveProgress();
+});
+
+$("videoPlayer").addEventListener("ended",()=>{
+  if(currentVideoKey){
+    localStorage.removeItem("nexus_progress_"+currentVideoKey);
+  }
+});
+
+$("seekBar").oninput=()=>{
+  const video=$("videoPlayer");
+  if(video.duration){
+    video.currentTime=(Number($("seekBar").value)/1000)*video.duration;
+  }
+};
+
+$("volumeBar").oninput=()=>{
+  $("videoPlayer").volume=Number($("volumeBar").value);
+};
+
+$("backward").onclick=()=>{
+  const video=$("videoPlayer");
+  video.currentTime=Math.max(0,video.currentTime-10);
+};
+
+$("forward").onclick=()=>{
+  const video=$("videoPlayer");
+  if(Number.isFinite(video.duration)){
+    video.currentTime=Math.min(video.duration,video.currentTime+10);
+  }
+};
+
+$("fullscreenButton").onclick=async()=>{
+  const area=$("playerArea");
+  try{
+    if(document.fullscreenElement){
+      await document.exitFullscreen();
+    }else if(area.requestFullscreen){
+      await area.requestFullscreen();
+    }else if($("videoPlayer").webkitEnterFullscreen){
+      $("videoPlayer").webkitEnterFullscreen();
+    }
+  }catch(e){}
+};
+
+$("qualitySelect").onchange=()=>{
+  if(hlsInstance){
+    hlsInstance.currentLevel=Number($("qualitySelect").value);
+  }
+};
 
 function openDetails(id,autoPlay=false){
   const item=catalog.find(movie=>Number(movie.id)===Number(id));
@@ -625,10 +748,8 @@ function openDetails(id,autoPlay=false){
 
   $("detailCover").src=safeURL(item.capa)||"";
   $("detailTitle").textContent=item.titulo||"Sem título";
-
   $("detailMeta").textContent=
     [item.ano,item.categoria].filter(Boolean).join(" • ");
-
   $("detailDescription").textContent=
     item.descricao||"Nenhuma descrição cadastrada.";
 
@@ -658,14 +779,11 @@ function renderSeasons(seasons,category){
     box.className="season";
 
     const heading=document.createElement("h3");
-    heading.textContent=
-      category==="filme"?"Reprodução do filme":
+    heading.textContent=category==="filme"?"Reprodução do filme":
       season.nome||"Temporada "+(season.numero||index+1);
-
     box.appendChild(heading);
 
-    const episodes=Array.isArray(season.episodios)?
-      season.episodios:[];
+    const episodes=Array.isArray(season.episodios)?season.episodios:[];
 
     episodes.forEach((episode,episodeIndex)=>{
       const row=document.createElement("div");
@@ -675,47 +793,6 @@ function renderSeasons(seasons,category){
       title.textContent=episode.titulo||
         (category==="filme"?"Assistir filme":
         "Episódio "+(episode.numero||episodeIndex+1));
-
       row.appendChild(title);
 
-      const link=safeURL(getVideoLink(episode));
-
-      if(link){
-        const button=document.createElement("button");
-        button.className="watch";
-        button.textContent="▶ Assistir";
-        button.onclick=()=>playVideo(link);
-        row.appendChild(button);
-      }else{
-        const unavailable=document.createElement("small");
-        unavailable.textContent="Vídeo não cadastrado";
-        row.appendChild(unavailable);
-      }
-
-      box.appendChild(row);
-    });
-
-    container.appendChild(box);
-  });
-}
-
-function closeDetails(){
-  stopPlayer();
-  $("detailsModal").classList.remove("show");
-  document.body.style.overflow="";
-}
-
-function outsideClose(event){
-  if(event.target.id==="detailsModal")closeDetails();
-}
-
-document.addEventListener("keydown",event=>{
-  if(event.key==="Escape")closeDetails();
-});
-
-loadCatalog();
-</script>
-
-</body>
-  </html>
-  
+      const link=safeURL(getVideoLin
