@@ -795,4 +795,50 @@ function renderSeasons(seasons,category){
         "Episódio "+(episode.numero||episodeIndex+1));
       row.appendChild(title);
 
-      const link=safeURL(getVideoLin
+      const link=safeURL(getVideoLink(episode));
+
+      if(link){
+        const button=document.createElement("button");
+        button.className="watch";
+        button.textContent="▶ Assistir";
+        button.onclick=()=>playVideo(link);
+        row.appendChild(button);
+      }else{
+        const unavailable=document.createElement("small");
+        unavailable.textContent="Vídeo não cadastrado";
+        row.appendChild(unavailable);
+      }
+
+      box.appendChild(row);
+    });
+
+    container.appendChild(box);
+  });
+}
+
+function closeDetails(){
+  stopPlayer();
+  $("detailsModal").classList.remove("show");
+  document.body.style.overflow="";
+}
+
+function outsideClose(event){
+  if(event.target.id==="detailsModal")closeDetails();
+}
+
+document.addEventListener("keydown",event=>{
+  if(event.key==="Escape"){
+    if($("detailsModal").classList.contains("show"))closeDetails();
+  }
+});
+
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden)saveProgress();
+});
+
+loadCatalog();
+</script>
+
+</body>
+</html>
+
