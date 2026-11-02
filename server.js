@@ -1,390 +1,242 @@
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEXUS MEDIA - Administração</title>
+const express = require("express");
+const { Pool } = require("pg");
+const path = require("path");
+const crypto = require("crypto");
 
-<style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  padding:20px;
-  background:#0b1020;
-  color:#fff;
-  font-family:Arial,sans-serif;
-}
-.container{max-width:900px;margin:auto}
-h1{color:#7c8cff;text-align:center}
-h2{color:#aab5ff}
-.card{
-  background:#151d32;
-  padding:20px;
-  border-radius:14px;
-  margin:18px 0;
-}
-input,select,textarea,button{
-  width:100%;
-  padding:13px;
-  margin:7px 0;
-  border:0;
-  border-radius:8px;
-  font-size:15px;
-}
-input,select,textarea{
-  background:#25304b;
-  color:white;
-}
-button{
-  background:#5865f2;
-  color:white;
-  font-weight:bold;
-  cursor:pointer;
-}
-button.danger{background:#d93650}
-button.secondary{background:#394765}
-.hidden{display:none!important}
-.item{
-  background:#202b45;
-  padding:14px;
-  border-radius:10px;
-  margin:10px 0;
-}
-.item strong{color:#aab5ff}
-.item button{width:auto;margin-right:5px}
-.msg{color:#ff9c9c;min-height:20px}
-small{color:#aeb9d1}
-</style>
-</head>
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-<body>
-<div class="container">
+app.use(express.json({ limit: "1mb" }));
 
-<h1>NEXUS MEDIA</h1>
-<p style="text-align:center">Painel administrativo</p>
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false
+});
 
-<!-- LOGIN -->
-<div class="card" id="login">
-  <h2>Entrar no painel</h2>
-  <input
-    type="password"
-    id="token"
-    placeholder="Senha de administrador"
-    autocomplete="current-password"
-  >
-  <button id="btnEntrar" onclick="entrar()">ENTRAR</button>
-  <p class="msg" id="loginMsg"></p>
-</div>
+// AUTENTICAÇÃO DO ADMINISTRADOR
+function protegerAdmin(req, res, next) {
+  const senhaCorreta = process.env.ADMIN_TOKEN;
+  const autorizacao = req.headers.authorization || "";
 
-<!-- PAINEL -->
-<div id="painel" class="hidden">
-
-  <div class="card">
-    <h2>Adicionar conteúdo</h2>
-
-    <input id="titulo" placeholder="Título do conteúdo">
-
-    <select id="categoria">
-      <option value="filme">Filme</option>
-      <option value="serie">Série</option>
-      <option value="anime">Anime</option>
-    </select>
-
-    <input id="ano" type="number" placeholder="Ano de lançamento">
-
-    <input id="capa" placeholder="URL da imagem da capa">
-
-    <textarea id="descricao" rows="4"
-      placeholder="Descrição do conteúdo"></textarea>
-
-    <button onclick="salvar()">SALVAR CONTEÚDO</button>
-    <button class="secondary hidden" id="cancelar"
-      onclick="cancelarEdicao()">CANCELAR EDIÇÃO</button>
-
-    <p class="msg" id="formMsg"></p>
-  </div>
-
-  <div class="card">
-    <h2>Catálogo</h2>
-    <input id="pesquisa" placeholder="Pesquisar conteúdo..."
-      oninput="filtrar()">
-    <button class="secondary" onclick="carregar()">ATUALIZAR LISTA</button>
-    <div id="lista"></div>
-  </div>
-
-  <button class="danger" onclick="sair()">SAIR DO PAINEL</button>
-</div>
-
-</div>
-
-<script>
-"use strict";
-
-let token = "";
-let catalogo = [];
-let editandoId = null;
-
-const $ = id => document.getElementById(id);
-
-async function requisicao(url, opcoes = {}) {
-  const cabecalhos = {
-    ...(opcoes.headers || {}),
-    "Authorization": "Bearer " + token
-  };
-
-  if (opcoes.body) {
-    cabecalhos["Content-Type"] = "application/json";
-  }
-
-  return fetch(url, {
-    ...opcoes,
-    headers: cabecalhos
-  });
-}
-
-async function entrar() {
-  const valor = $("token").value.trim();
-  const msg = $("loginMsg");
-  const botao = $("btnEntrar");
-
-  if (!valor) {
-    msg.textContent = "Digite sua senha.";
-    return;
-  }
-
-  botao.disabled = true;
-  msg.textContent = "Verificando acesso...";
-
-  try {
-    const resposta = await fetch("/api/admin/verificar", {
-      method: "GET",
-      headers: {
-        "Authorization": "Bearer " + valor
-      },
-      cache: "no-store"
+  if (!senhaCorreta) {
+    return res.status(503).json({
+      erro: "ADMIN_TOKEN não configurado."
     });
-
-    if (!resposta.ok) {
-      msg.textContent =
-        resposta.status === 401
-          ? "Senha incorreta."
-          : "Não foi possível verificar o acesso.";
-
-      return;
-    }
-
-    const dados = await resposta.json();
-
-    if (dados.autenticado !== true) {
-      msg.textContent = "Resposta de autenticação inválida.";
-      return;
-    }
-
-    token = valor;
-
-    $("login").classList.add("hidden");
-    $("painel").classList.remove("hidden");
-
-    msg.textContent = "";
-    await carregar();
-
-  } catch (erro) {
-    msg.textContent = "Erro ao conectar ao servidor.";
-  } finally {
-    botao.disabled = false;
-  }
-}
-
-function sair() {
-  token = "";
-  catalogo = [];
-  editandoId = null;
-
-  $("token").value = "";
-  $("login").classList.remove("hidden");
-  $("painel").classList.add("hidden");
-  $("lista").innerHTML = "";
-}
-
-async function carregar() {
-  $("lista").innerHTML = "Carregando catálogo...";
-
-  try {
-    const resposta = await requisicao("/api/catalogo");
-
-    if (resposta.status === 401) {
-      alert("Sua autorização expirou. Entre novamente.");
-      sair();
-      return;
-    }
-
-    if (!resposta.ok) {
-      $("lista").textContent = "Erro ao carregar catálogo.";
-      return;
-    }
-
-    const dados = await resposta.json();
-
-    catalogo = Array.isArray(dados) ? dados : [];
-    filtrar();
-
-  } catch (erro) {
-    $("lista").textContent = "Não foi possível conectar ao servidor.";
-  }
-}
-
-function filtrar() {
-  const termo = $("pesquisa").value.toLowerCase();
-
-  const encontrados = catalogo.filter(item =>
-    String(item.titulo || "").toLowerCase().includes(termo)
-  );
-
-  mostrar(encontrados);
-}
-
-function mostrar(itens) {
-  const lista = $("lista");
-  lista.innerHTML = "";
-
-  if (!itens.length) {
-    lista.textContent = "Nenhum conteúdo encontrado.";
-    return;
   }
 
-  itens.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "item";
+  if (!autorizacao.startsWith("Bearer ")) {
+    return res.status(401).json({
+      erro: "Acesso não autorizado."
+    });
+  }
 
-    const titulo = document.createElement("strong");
-    titulo.textContent = item.titulo || "Sem título";
+  const senhaEnviada = autorizacao.slice(7);
 
-    const info = document.createElement("p");
-    info.textContent =
-      (item.categoria || "") + " • " + (item.ano || "");
+  const enviada = Buffer.from(senhaEnviada, "utf8");
+  const correta = Buffer.from(senhaCorreta, "utf8");
 
-    const editar = document.createElement("button");
-    editar.textContent = "EDITAR";
-    editar.onclick = () => editarItem(item);
+  if (
+    enviada.length !== correta.length ||
+    !crypto.timingSafeEqual(enviada, correta)
+  ) {
+    return res.status(401).json({
+      erro: "Senha incorreta."
+    });
+  }
 
-    const excluir = document.createElement("button");
-    excluir.textContent = "EXCLUIR";
-    excluir.className = "danger";
-    excluir.onclick = () => excluirItem(item.id);
+  next();
+}
 
-    div.append(titulo, info, editar, excluir);
-    lista.appendChild(div);
+// PÁGINA INICIAL
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "admin.html"));
+});
+
+// VERIFICAÇÃO DO ADMIN
+app.get("/api/admin/verificar", protegerAdmin, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    autenticado: true
   });
-}
+});
 
-function limparFormulario() {
-  $("titulo").value = "";
-  $("categoria").value = "filme";
-  $("ano").value = "";
-  $("capa").value = "";
-  $("descricao").value = "";
-}
-
-function editarItem(item) {
-  editandoId = item.id;
-
-  $("titulo").value = item.titulo || "";
-  $("categoria").value = item.categoria || "filme";
-  $("ano").value = item.ano || "";
-  $("capa").value = item.capa || "";
-  $("descricao").value = item.descricao || "";
-
-  $("cancelar").classList.remove("hidden");
-  $("formMsg").textContent = "Editando conteúdo.";
-  window.scrollTo({top: 0, behavior: "smooth"});
-}
-
-function cancelarEdicao() {
-  editandoId = null;
-  limparFormulario();
-  $("cancelar").classList.add("hidden");
-  $("formMsg").textContent = "";
-}
-
-async function salvar() {
-  const titulo = $("titulo").value.trim();
-
-  if (!titulo) {
-    $("formMsg").textContent = "Informe o título.";
-    return;
-  }
-
-  const conteudo = {
-    titulo,
-    categoria: $("categoria").value,
-    ano: $("ano").value ? Number($("ano").value) : null,
-    capa: $("capa").value.trim(),
-    descricao: $("descricao").value.trim()
-  };
-
-  const editando = editandoId !== null;
-
+// SAÚDE DO SERVIDOR
+app.get("/api/health", async (req, res) => {
   try {
-    const resposta = await requisicao(
-      editando
-        ? "/api/catalogo/" + encodeURIComponent(editandoId)
-        : "/api/catalogo",
-      {
-        method: editando ? "PUT" : "POST",
-        body: JSON.stringify(conteudo)
-      }
+    await pool.query("SELECT 1");
+
+    res.json({
+      status: "online",
+      banco: "conectado"
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "erro",
+      banco: "desconectado"
+    });
+  }
+});
+
+// CRIAR TABELA
+async function iniciarBanco() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS catalogo (
+      id SERIAL PRIMARY KEY,
+      titulo VARCHAR(255) NOT NULL,
+      categoria VARCHAR(50) NOT NULL,
+      ano INTEGER,
+      descricao TEXT,
+      capa TEXT,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+// LISTAR CATÁLOGO
+app.get("/api/catalogo", async (req, res) => {
+  try {
+    const resultado = await pool.query(
+      "SELECT * FROM catalogo ORDER BY id DESC"
     );
 
-    if (resposta.status === 401) {
-      alert("Acesso não autorizado.");
-      sair();
-      return;
-    }
-
-    if (!resposta.ok) {
-      $("formMsg").textContent = "Erro ao salvar conteúdo.";
-      return;
-    }
-
-    $("formMsg").textContent = "Conteúdo salvo com sucesso!";
-    cancelarEdicao();
-    await carregar();
-
-  } catch (erro) {
-    $("formMsg").textContent = "Erro de conexão.";
+    res.json(resultado.rows);
+  } catch (error) {
+    res.status(500).json({
+      erro: "Erro ao consultar catálogo."
+    });
   }
-}
+});
 
-async function excluirItem(id) {
-  if (!confirm("Deseja realmente excluir este conteúdo?")) {
-    return;
-  }
-
+// CONSULTAR POR ID
+app.get("/api/catalogo/:id", async (req, res) => {
   try {
-    const resposta = await requisicao(
-      "/api/catalogo/" + encodeURIComponent(id),
-      { method: "DELETE" }
+    const resultado = await pool.query(
+      "SELECT * FROM catalogo WHERE id = $1",
+      [req.params.id]
     );
 
-    if (resposta.status === 401) {
-      alert("Acesso não autorizado.");
-      sair();
-      return;
+    if (!resultado.rows.length) {
+      return res.status(404).json({
+        erro: "Conteúdo não encontrado."
+      });
     }
 
-    if (!resposta.ok) {
-      alert("Não foi possível excluir.");
-      return;
-    }
-
-    await carregar();
-
-  } catch (erro) {
-    alert("Erro de conexão.");
+    res.json(resultado.rows[0]);
+  } catch (error) {
+    res.status(500).json({
+      erro: "Erro ao consultar conteúdo."
+    });
   }
-}
-</script>
+});
 
-</body>
-</html>
+// CADASTRAR
+app.post("/api/catalogo", protegerAdmin, async (req, res) => {
+  try {
+    const { titulo, categoria, ano, descricao, capa } = req.body;
+
+    if (!titulo || !categoria) {
+      return res.status(400).json({
+        erro: "Título e categoria são obrigatórios."
+      });
+    }
+
+    const resultado = await pool.query(
+      `INSERT INTO catalogo
+       (titulo, categoria, ano, descricao, capa)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [
+        titulo,
+        categoria,
+        ano || null,
+        descricao || "",
+        capa || ""
+      ]
+    );
+
+    res.status(201).json(resultado.rows[0]);
+  } catch (error) {
+    res.status(500).json({
+      erro: "Erro ao cadastrar."
+    });
+  }
+});
+
+// EDITAR
+app.put("/api/catalogo/:id", protegerAdmin, async (req, res) => {
+  try {
+    const { titulo, categoria, ano, descricao, capa } = req.body;
+
+    if (!titulo || !categoria) {
+      return res.status(400).json({
+        erro: "Título e categoria são obrigatórios."
+      });
+    }
+
+    const resultado = await pool.query(
+      `UPDATE catalogo
+       SET titulo=$1, categoria=$2, ano=$3,
+           descricao=$4, capa=$5
+       WHERE id=$6 RETURNING *`,
+      [
+        titulo,
+        categoria,
+        ano || null,
+        descricao || "",
+        capa || "",
+        req.params.id
+      ]
+    );
+
+    if (!resultado.rows.length) {
+      return res.status(404).json({
+        erro: "Conteúdo não encontrado."
+      });
+    }
+
+    res.json(resultado.rows[0]);
+  } catch (error) {
+    res.status(500).json({
+      erro: "Erro ao editar."
+    });
+  }
+});
+
+// EXCLUIR
+app.delete("/api/catalogo/:id", protegerAdmin, async (req, res) => {
+  try {
+    const resultado = await pool.query(
+      "DELETE FROM catalogo WHERE id=$1 RETURNING id",
+      [req.params.id]
+    );
+
+    if (!resultado.rows.length) {
+      return res.status(404).json({
+        erro: "Conteúdo não encontrado."
+      });
+    }
+
+    res.json({
+      mensagem: "Conteúdo excluído."
+    });
+  } catch (error) {
+    res.status(500).json({
+      erro: "Erro ao excluir."
+    });
+  }
+});
+
+// INICIAR SERVIDOR
+iniciarBanco()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log("NEXUS MEDIA iniciado na porta " + PORT);
+    });
+  })
+  .catch(error => {
+    console.error("Erro ao iniciar:", error.message);
+    process.exit(1);
+  });
