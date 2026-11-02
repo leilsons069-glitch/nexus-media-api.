@@ -1,6 +1,7 @@
 
 const express = require("express");
 const { Pool } = require("pg");
+const path = require("path");
 
 const app = express();
 app.use(express.json({ limit: "5mb" }));
@@ -48,23 +49,35 @@ function protegerAdmin(req, res, next) {
   next();
 }
 
+// ABRIR PAINEL ADMINISTRATIVO
 app.get("/", (req, res) => {
-  res.json({
-    nome: "NEXUS MEDIA API",
-    status: "online",
-    banco: "PostgreSQL"
-  });
+  res.sendFile(path.join(__dirname, "admin.html"));
 });
 
+// TESTE DA API E DO BANCO
 app.get("/api/health", async (req, res) => {
   try {
     await pool.query("SELECT 1");
-    res.json({ status: "online", banco: "conectado" });
+    res.json({
+      status: "online",
+      banco: "conectado"
+    });
   } catch (error) {
-    res.status(500).json({ status: "erro no banco" });
+    res.status(500).json({
+      status: "erro no banco"
+    });
   }
 });
 
+// VALIDAR SENHA DO ADMINISTRADOR
+app.get("/api/admin/verificar", protegerAdmin, (req, res) => {
+  res.json({
+    autenticado: true,
+    mensagem: "Administrador autenticado"
+  });
+});
+
+// LISTAR CATÁLOGO
 app.get("/api/catalogo", async (req, res) => {
   try {
     let sql = "SELECT * FROM catalogo";
@@ -94,10 +107,13 @@ app.get("/api/catalogo", async (req, res) => {
       resultados: resultado.rows
     });
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao consultar catálogo" });
+    res.status(500).json({
+      erro: "Erro ao consultar catálogo"
+    });
   }
 });
 
+// BUSCAR CONTEÚDO POR ID
 app.get("/api/catalogo/:id", async (req, res) => {
   try {
     const resultado = await pool.query(
@@ -113,10 +129,13 @@ app.get("/api/catalogo/:id", async (req, res) => {
 
     res.json(resultado.rows[0]);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao buscar conteúdo" });
+    res.status(500).json({
+      erro: "Erro ao buscar conteúdo"
+    });
   }
 });
 
+// CADASTRAR CONTEÚDO
 app.post("/api/catalogo", protegerAdmin, async (req, res) => {
   try {
     const { titulo, categoria, ano, descricao, capa } = req.body;
@@ -140,16 +159,24 @@ app.post("/api/catalogo", protegerAdmin, async (req, res) => {
        (titulo, categoria, ano, descricao, capa)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [titulo, categoria.toLowerCase(), ano || null,
-       descricao || null, capa || null]
+      [
+        titulo,
+        categoria.toLowerCase(),
+        ano || null,
+        descricao || null,
+        capa || null
+      ]
     );
 
     res.status(201).json(resultado.rows[0]);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao cadastrar conteúdo" });
+    res.status(500).json({
+      erro: "Erro ao cadastrar conteúdo"
+    });
   }
 });
 
+// EDITAR CONTEÚDO
 app.put("/api/catalogo/:id", protegerAdmin, async (req, res) => {
   try {
     const { titulo, categoria, ano, descricao, capa } = req.body;
@@ -163,7 +190,14 @@ app.put("/api/catalogo/:id", protegerAdmin, async (req, res) => {
            capa = COALESCE($5, capa)
        WHERE id = $6
        RETURNING *`,
-      [titulo, categoria, ano, descricao, capa, req.params.id]
+      [
+        titulo,
+        categoria,
+        ano,
+        descricao,
+        capa,
+        req.params.id
+      ]
     );
 
     if (!resultado.rows.length) {
@@ -174,10 +208,13 @@ app.put("/api/catalogo/:id", protegerAdmin, async (req, res) => {
 
     res.json(resultado.rows[0]);
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao editar conteúdo" });
+    res.status(500).json({
+      erro: "Erro ao editar conteúdo"
+    });
   }
 });
 
+// EXCLUIR CONTEÚDO
 app.delete("/api/catalogo/:id", protegerAdmin, async (req, res) => {
   try {
     const resultado = await pool.query(
@@ -191,12 +228,17 @@ app.delete("/api/catalogo/:id", protegerAdmin, async (req, res) => {
       });
     }
 
-    res.json({ mensagem: "Conteúdo excluído" });
+    res.json({
+      mensagem: "Conteúdo excluído"
+    });
   } catch (error) {
-    res.status(500).json({ erro: "Erro ao excluir conteúdo" });
+    res.status(500).json({
+      erro: "Erro ao excluir conteúdo"
+    });
   }
 });
 
+// INICIAR SERVIDOR
 iniciarBanco()
   .then(() => {
     app.listen(PORT, "0.0.0.0", () => {
