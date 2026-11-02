@@ -334,7 +334,9 @@ footer{
       <button onclick="setFilter('anime',this)">Animes</button>
     </div>
   </div>
-  <div id="catalog"><div class="status">Carregando catálogo...</div></div>
+  <div id="catalog">
+    <div class="status">Carregando catálogo...</div>
+  </div>
 </main>
 
 <footer>
@@ -398,26 +400,67 @@ let currentVideoKey="";
 const $=id=>document.getElementById(id);
 $("year").textContent=new Date().getFullYear();
 
+/* URLs e imagens */
 function safeURL(value){
+  if(typeof value!=="string" || !value.trim())return "";
+
+  const clean=value.trim();
+
+  if(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(clean)){
+    return clean;
+  }
+
   try{
-    const url=new URL(value,window.location.origin);
-    if(url.protocol==="https:"||url.protocol==="http:")return url.href;
+    const url=new URL(clean,window.location.origin);
+
+    if(url.protocol==="https:" || url.protocol==="http:"){
+      return url.href;
+    }
   }catch(e){}
+
   return "";
 }
 
+/* Carregamento do catálogo */
 async function loadCatalog(){
+  const container=$("catalog");
+
+  container.innerHTML=
+    '<div class="status">Carregando catálogo...</div>';
+
   try{
     const response=await fetch(API,{cache:"no-store"});
-    if(!response.ok)throw new Error("Erro na API");
+
+    if(!response.ok){
+      throw new Error("Erro HTTP: "+response.status);
+    }
+
     const data=await response.json();
-    if(!Array.isArray(data))throw new Error("Catálogo inválido");
+
+    if(!Array.isArray(data)){
+      throw new Error("A API não retornou uma lista.");
+    }
+
     catalog=data;
+
     updateHero();
     renderCatalog();
-  }catch(e){
-    $("catalog").innerHTML=
-      '<div class="status">Não foi possível carregar o catálogo. Tente novamente.</div>';
+
+    console.log("NEXUS MEDIA: catálogo carregado!",catalog);
+
+  }catch(error){
+    console.error("Erro ao carregar catálogo:",error);
+
+    container.innerHTML=`
+      <div class="status">
+        Não foi possível carregar o catálogo.<br>
+        ${String(error.message||"Erro desconhecido")}
+        <br><br>
+        <button class="primary" onclick="loadCatalog()">
+          TENTAR NOVAMENTE
+        </button>
+      </div>
+    `;
   }
 }
 
@@ -436,21 +479,29 @@ function getVideoLink(episode){
   return episode?.url||episode?.video||episode?.link||"";
 }
 
+/* Banner principal */
 function updateHero(){
   featuredItem=catalog[0]||null;
-  if(!featuredItem)return;
+
+  if(!featuredItem){
+    $("heroTitle").textContent="NEXUS MEDIA";
+    $("heroWatch").style.display="none";
+    return;
+  }
 
   $("heroTitle").textContent=featuredItem.titulo||"NEXUS MEDIA";
   $("heroDescription").textContent=
     featuredItem.descricao||"Descubra seu próximo filme ou série.";
 
   const cover=safeURL(featuredItem.capa);
+
   if(cover){
     $("hero").style.backgroundImage=
       `linear-gradient(90deg,#08090d 5%,rgba(8,9,13,.85) 55%,rgba(8,9,13,.2)),linear-gradient(0deg,#08090d,transparent 45%),url("${cover}")`;
   }
 
   const episode=getEpisodes(featuredItem)[0];
+
   $("heroWatch").style.display=
     safeURL(getVideoLink(episode))?"inline-block":"none";
 }
@@ -459,14 +510,18 @@ function playFeatured(){
   if(featuredItem)openDetails(featuredItem.id,true);
 }
 
+/* Filtros */
 function setFilter(filter,button){
   currentFilter=filter;
+
   document.querySelectorAll(".filters button")
     .forEach(btn=>btn.classList.remove("active"));
+
   button.classList.add("active");
   renderCatalog();
 }
 
+/* Cartões */
 function createMovieCard(item){
   const card=document.createElement("article");
   card.className="movie";
@@ -476,19 +531,31 @@ function createMovieCard(item){
   img.className="cover";
   img.alt=item.titulo||"Capa";
   img.loading="lazy";
-  img.src=safeURL(item.capa)||"";
-  img.onerror=()=>{img.style.visibility="hidden"};
+
+  const cover=safeURL(item.capa);
+
+  if(cover){
+    img.src=cover;
+  }else{
+    img.style.visibility="hidden";
+  }
+
+  img.onerror=()=>{
+    img.style.visibility="hidden";
+  };
 
   const title=document.createElement("h3");
   title.textContent=item.titulo||"Sem título";
 
   const meta=document.createElement("small");
-  meta.textContent=[item.ano,item.categoria].filter(Boolean).join(" • ");
+  meta.textContent=
+    [item.ano,item.categoria].filter(Boolean).join(" • ");
 
   card.append(img,title,meta);
   return card;
 }
 
+/* Renderização */
 function renderCatalog(){
   const container=$("catalog");
   container.innerHTML="";
@@ -498,24 +565,30 @@ function renderCatalog(){
   const filtered=catalog.filter(item=>{
     const category=String(item.categoria||"").toLowerCase();
     const title=String(item.titulo||"").toLowerCase();
+
     return (currentFilter==="todos"||category===currentFilter)
       &&title.includes(search);
   });
 
   if(!filtered.length){
-    container.innerHTML='<div class="status">Nenhum título encontrado.</div>';
+    container.innerHTML=
+      '<div class="status">Nenhum título encontrado.</div>';
     return;
   }
 
   if(currentFilter!=="todos"||search){
     const section=document.createElement("section");
     const heading=document.createElement("h2");
+
     heading.className="section-title";
     heading.textContent="Resultados";
 
     const row=document.createElement("div");
     row.className="row-catalog";
-    filtered.forEach(item=>row.appendChild(createMovieCard(item)));
+
+    filtered.forEach(item=>{
+      row.appendChild(createMovieCard(item));
+    });
 
     section.append(heading,row);
     container.appendChild(section);
@@ -530,60 +603,91 @@ function renderCatalog(){
     const items=filtered.filter(item=>
       String(item.categoria||"").toLowerCase()===group.key
     );
+
     if(!items.length)return;
 
     const section=document.createElement("section");
     const heading=document.createElement("h2");
+
     heading.className="section-title";
     heading.textContent=group.title;
 
     const row=document.createElement("div");
     row.className="row-catalog";
-    items.forEach(item=>row.appendChild(createMovieCard(item)));
+
+    items.forEach(item=>{
+      row.appendChild(createMovieCard(item));
+    });
 
     section.append(heading,row);
     container.appendChild(section);
   });
 }
 
+/* Controles do player */
 function formatTime(seconds){
   if(!Number.isFinite(seconds))return "00:00";
+
   const min=Math.floor(seconds/60);
   const sec=Math.floor(seconds%60);
-  return String(min).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+
+  return String(min).padStart(2,"0")+":"+
+    String(sec).padStart(2,"0");
 }
 
 function saveProgress(){
   const video=$("videoPlayer");
+
   if(!currentVideoKey||!Number.isFinite(video.currentTime))return;
 
   if(video.currentTime>5&&video.duration){
-    localStorage.setItem("nexus_progress_"+currentVideoKey,
-      JSON.stringify({time:video.currentTime,duration:video.duration}));
+    try{
+      localStorage.setItem(
+        "nexus_progress_"+currentVideoKey,
+        JSON.stringify({
+          time:video.currentTime,
+          duration:video.duration
+        })
+      );
+    }catch(e){
+      console.warn("Não foi possível salvar o progresso.",e);
+    }
   }
 }
 
 function updateProgress(){
   const video=$("videoPlayer");
+
   if(!video.duration||!Number.isFinite(video.duration))return;
 
   $("seekBar").value=(video.currentTime/video.duration)*1000;
+
   $("timeDisplay").textContent=
-    formatTime(video.currentTime)+" / "+formatTime(video.duration);
+    formatTime(video.currentTime)+" / "+
+    formatTime(video.duration);
 }
 
 function loadQualities(){
   const select=$("qualitySelect");
-  select.innerHTML='<option value="-1">Automática</option>';
+
+  select.innerHTML=
+    '<option value="-1">Automática</option>';
+
   if(!hlsInstance)return;
 
   const levels=hlsInstance.levels;
-  const heights=[...new Set(levels.map(level=>level.height).filter(Boolean))]
-    .sort((a,b)=>b-a);
+
+  const heights=[
+    ...new Set(levels.map(level=>level.height).filter(Boolean))
+  ].sort((a,b)=>b-a);
 
   heights.forEach(height=>{
     const option=document.createElement("option");
-    option.value=String(levels.findIndex(level=>level.height===height));
+
+    option.value=String(
+      levels.findIndex(level=>level.height===height)
+    );
+
     option.textContent=height+"p";
     select.appendChild(option);
   });
@@ -593,6 +697,7 @@ function stopPlayer(){
   saveProgress();
 
   const video=$("videoPlayer");
+
   if(hlsInstance){
     hlsInstance.destroy();
     hlsInstance=null;
@@ -606,8 +711,10 @@ function stopPlayer(){
   $("playerArea").style.display="none";
 }
 
+/* Reprodução */
 function playVideo(rawURL){
   const url=safeURL(rawURL);
+
   if(!url){
     alert("Link de vídeo inválido.");
     return;
@@ -619,19 +726,34 @@ function playVideo(rawURL){
   const message=$("playerMessage");
 
   currentVideoKey=url;
+
   $("playerArea").style.display="block";
   message.textContent="Carregando vídeo...";
   $("seekBar").value=0;
   $("timeDisplay").textContent="00:00 / 00:00";
-  $("qualitySelect").innerHTML='<option value="-1">Automática</option>';
 
-  const saved=localStorage.getItem("nexus_progress_"+currentVideoKey);
+  $("qualitySelect").innerHTML=
+    '<option value="-1">Automática</option>';
+
+  let saved=null;
+
+  try{
+    saved=localStorage.getItem(
+      "nexus_progress_"+currentVideoKey
+    );
+  }catch(e){}
 
   function restoreProgress(){
     if(!saved)return;
+
     try{
       const progress=JSON.parse(saved);
-      if(progress.time>5&&progress.time<video.duration-5){
+
+      if(
+        progress.time>5 &&
+        Number.isFinite(video.duration) &&
+        progress.time<video.duration-5
+      ){
         video.currentTime=progress.time;
         message.textContent="Progresso anterior restaurado.";
       }
@@ -640,43 +762,61 @@ function playVideo(rawURL){
 
   const isHLS=/\.m3u8($|\?)/i.test(url);
 
-  video.addEventListener("loadedmetadata",restoreProgress,{once:true});
+  video.addEventListener(
+    "loadedmetadata",
+    restoreProgress,
+    {once:true}
+  );
 
   if(isHLS&&window.Hls&&Hls.isSupported()){
     hlsInstance=new Hls();
+
     hlsInstance.loadSource(url);
     hlsInstance.attachMedia(video);
 
     hlsInstance.on(Hls.Events.MANIFEST_PARSED,()=>{
       loadQualities();
+
       message.textContent="Vídeo pronto para reprodução.";
       video.play().catch(()=>{});
     });
 
     hlsInstance.on(Hls.Events.ERROR,(event,data)=>{
       if(data.fatal){
-        message.textContent="Falha ao reproduzir. Confira o link do vídeo.";
+        message.textContent=
+          "Falha ao reproduzir. Confira o link do vídeo.";
       }
     });
+
   }else{
     video.src=url;
+
     video.addEventListener("loadedmetadata",()=>{
       message.textContent="Vídeo pronto para reprodução.";
       video.play().catch(()=>{});
     },{once:true});
 
     video.addEventListener("error",()=>{
-      message.textContent="Falha na reprodução. Confira o link.";
+      message.textContent=
+        "Falha na reprodução. Confira o link.";
     },{once:true});
   }
 
-  $("playerArea").scrollIntoView({behavior:"smooth",block:"center"});
+  $("playerArea").scrollIntoView({
+    behavior:"smooth",
+    block:"center"
+  });
 }
 
+/* Botões do player */
 $("playPause").onclick=()=>{
   const video=$("videoPlayer");
-  if(video.paused)video.play().catch(()=>{});
-  else video.pause();
+
+  if(video.paused){
+    video.play().catch(()=>{});
+  }else{
+    video.pause();
+  }
 };
 
 $("videoPlayer").addEventListener("play",()=>{
@@ -694,35 +834,47 @@ $("videoPlayer").addEventListener("timeupdate",()=>{
 
 $("videoPlayer").addEventListener("ended",()=>{
   if(currentVideoKey){
-    localStorage.removeItem("nexus_progress_"+currentVideoKey);
+    try{
+      localStorage.removeItem(
+        "nexus_progress_"+currentVideoKey
+      );
+    }catch(e){}
   }
 });
 
 $("seekBar").oninput=()=>{
   const video=$("videoPlayer");
+
   if(video.duration){
-    video.currentTime=(Number($("seekBar").value)/1000)*video.duration;
+    video.currentTime=
+      (Number($("seekBar").value)/1000)*video.duration;
   }
 };
 
 $("volumeBar").oninput=()=>{
-  $("videoPlayer").volume=Number($("volumeBar").value);
+  $("videoPlayer").volume=
+    Number($("volumeBar").value);
 };
 
 $("backward").onclick=()=>{
   const video=$("videoPlayer");
-  video.currentTime=Math.max(0,video.currentTime-10);
+
+  video.currentTime=
+    Math.max(0,video.currentTime-10);
 };
 
 $("forward").onclick=()=>{
   const video=$("videoPlayer");
+
   if(Number.isFinite(video.duration)){
-    video.currentTime=Math.min(video.duration,video.currentTime+10);
+    video.currentTime=
+      Math.min(video.duration,video.currentTime+10);
   }
 };
 
 $("fullscreenButton").onclick=async()=>{
   const area=$("playerArea");
+
   try{
     if(document.fullscreenElement){
       await document.exitFullscreen();
@@ -736,20 +888,32 @@ $("fullscreenButton").onclick=async()=>{
 
 $("qualitySelect").onchange=()=>{
   if(hlsInstance){
-    hlsInstance.currentLevel=Number($("qualitySelect").value);
+    hlsInstance.currentLevel=
+      Number($("qualitySelect").value);
   }
 };
 
+/* Detalhes do conteúdo */
 function openDetails(id,autoPlay=false){
-  const item=catalog.find(movie=>Number(movie.id)===Number(id));
+  const item=catalog.find(movie=>
+    Number(movie.id)===Number(id)
+  );
+
   if(!item)return;
 
   stopPlayer();
 
-  $("detailCover").src=safeURL(item.capa)||"";
-  $("detailTitle").textContent=item.titulo||"Sem título";
+  const cover=safeURL(item.capa);
+
+  $("detailCover").src=cover||"";
+  $("detailCover").style.display=cover?"block":"none";
+
+  $("detailTitle").textContent=
+    item.titulo||"Sem título";
+
   $("detailMeta").textContent=
     [item.ano,item.categoria].filter(Boolean).join(" • ");
+
   $("detailDescription").textContent=
     item.descricao||"Nenhuma descrição cadastrada.";
 
@@ -759,13 +923,22 @@ function openDetails(id,autoPlay=false){
   document.body.style.overflow="hidden";
 
   if(autoPlay){
-    const first=getEpisodes(item).find(ep=>safeURL(getVideoLink(ep)));
-    if(first)setTimeout(()=>playVideo(getVideoLink(first)),250);
+    const first=getEpisodes(item).find(ep=>
+      safeURL(getVideoLink(ep))
+    );
+
+    if(first){
+      setTimeout(()=>{
+        playVideo(getVideoLink(first));
+      },250);
+    }
   }
 }
 
+/* Temporadas e episódios */
 function renderSeasons(seasons,category){
   const container=$("detailSeasons");
+
   container.innerHTML="";
 
   if(!Array.isArray(seasons)||!seasons.length){
@@ -779,32 +952,46 @@ function renderSeasons(seasons,category){
     box.className="season";
 
     const heading=document.createElement("h3");
-    heading.textContent=category==="filme"?"Reprodução do filme":
-      season.nome||"Temporada "+(season.numero||index+1);
+
+    heading.textContent=
+      category==="filme"
+        ?"Reprodução do filme"
+        :season.nome||"Temporada "+(season.numero||index+1);
+
     box.appendChild(heading);
 
-    const episodes=Array.isArray(season.episodios)?season.episodios:[];
+    const episodes=
+      Array.isArray(season.episodios)
+        ?season.episodios
+        :[];
 
     episodes.forEach((episode,episodeIndex)=>{
       const row=document.createElement("div");
       row.className="episode";
 
       const title=document.createElement("span");
-      title.textContent=episode.titulo||
-        (category==="filme"?"Assistir filme":
-        "Episódio "+(episode.numero||episodeIndex+1));
+
+      title.textContent=
+        episode.titulo||
+        (category==="filme"
+          ?"Assistir filme"
+          :"Episódio "+(episode.numero||episodeIndex+1));
+
       row.appendChild(title);
 
       const link=safeURL(getVideoLink(episode));
 
       if(link){
         const button=document.createElement("button");
+
         button.className="watch";
         button.textContent="▶ Assistir";
         button.onclick=()=>playVideo(link);
+
         row.appendChild(button);
       }else{
         const unavailable=document.createElement("small");
+
         unavailable.textContent="Vídeo não cadastrado";
         row.appendChild(unavailable);
       }
@@ -816,29 +1003,37 @@ function renderSeasons(seasons,category){
   });
 }
 
+/* Fechar janela */
 function closeDetails(){
   stopPlayer();
+
   $("detailsModal").classList.remove("show");
   document.body.style.overflow="";
 }
 
 function outsideClose(event){
-  if(event.target.id==="detailsModal")closeDetails();
+  if(event.target.id==="detailsModal"){
+    closeDetails();
+  }
 }
 
 document.addEventListener("keydown",event=>{
   if(event.key==="Escape"){
-    if($("detailsModal").classList.contains("show"))closeDetails();
+    if($("detailsModal").classList.contains("show")){
+      closeDetails();
+    }
   }
 });
 
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden)saveProgress();
+  if(document.hidden){
+    saveProgress();
+  }
 });
 
+/* Iniciar plataforma */
 loadCatalog();
-</script>
 
+</script>
 </body>
 </html>
-
