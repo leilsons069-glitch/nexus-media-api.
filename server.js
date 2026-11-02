@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "6mb" }));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -33,14 +33,16 @@ function protegerAdmin(req, res, next) {
     });
   }
 
-  const senhaEnviada = autorizacao.slice(7);
+  const senhaEnviada = Buffer.from(
+    autorizacao.slice(7),
+    "utf8"
+  );
 
-  const enviada = Buffer.from(senhaEnviada, "utf8");
   const correta = Buffer.from(senhaCorreta, "utf8");
 
   if (
-    enviada.length !== correta.length ||
-    !crypto.timingSafeEqual(enviada, correta)
+    senhaEnviada.length !== correta.length ||
+    !crypto.timingSafeEqual(senhaEnviada, correta)
   ) {
     return res.status(401).json({
       erro: "Senha incorreta."
@@ -55,12 +57,10 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
-// VERIFICAÇÃO DO ADMIN
+// VERIFICAR ADMINISTRADOR
 app.get("/api/admin/verificar", protegerAdmin, (req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({
-    autenticado: true
-  });
+  res.json({ autenticado: true });
 });
 
 // SAÚDE DO SERVIDOR
@@ -80,7 +80,7 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-// CRIAR TABELA
+// CRIAR E ATUALIZAR ESTRUTURA DO BANCO
 async function iniciarBanco() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS catalogo (
@@ -93,6 +93,48 @@ async function iniciarBanco() {
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Adiciona a coluna sem apagar os conteúdos antigos.
+  await pool.query(`
+    ALTER TABLE catalogo
+    ADD COLUMN IF NOT EXISTS temporadas JSONB
+    NOT NULL DEFAULT '[]'::jsonb
+  `);
+}
+
+// VALIDAR DADOS
+function validarConteudo(dados) {
+  const { titulo, categoria, ano } = dados;
+
+  const categorias = ["filme", "serie", "anime"];
+
+  if (!titulo || !String(titulo).trim()) {
+    return "Informe o título.";
+  }
+
+  if (!categorias.includes(categoria)) {
+    return "Categoria inválida.";
+  }
+
+  if (
+    ano !== null &&
+    ano !== undefined &&
+    ano !== "" &&
+    (!Number.isInteger(Number(ano)) ||
+      Number(ano) < 1888 ||
+      Number(ano) > 2200)
+  ) {
+    return "Ano inválido.";
+  }
+
+  if (
+    dados.temporadas !== undefined &&
+    !Array.isArray(dados.temporadas)
+  ) {
+    return "Temporadas devem ser uma lista.";
+  }
+
+  return null;
 }
 
 // LISTAR CATÁLOGO
@@ -104,6 +146,8 @@ app.get("/api/catalogo", async (req, res) => {
 
     res.json(resultado.rows);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       erro: "Erro ao consultar catálogo."
     });
@@ -126,67 +170,92 @@ app.get("/api/catalogo/:id", async (req, res) => {
 
     res.json(resultado.rows[0]);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       erro: "Erro ao consultar conteúdo."
     });
   }
 });
 
-// CADASTRAR
+// CADASTRAR CONTEÚDO
 app.post("/api/catalogo", protegerAdmin, async (req, res) => {
   try {
-    const { titulo, categoria, ano, descricao, capa } = req.body;
+    const erro = validarConteudo(req.body);
 
-    if (!titulo || !categoria) {
-      return res.status(400).json({
-        erro: "Título e categoria são obrigatórios."
-      });
+    if (erro) {
+      return res.status(400).json({ erro });
     }
+
+    const {
+      titulo,
+      categoria,
+      ano,
+      descricao,
+      capa,
+      temporadas
+    } = req.body;
 
     const resultado = await pool.query(
       `INSERT INTO catalogo
-       (titulo, categoria, ano, descricao, capa)
-       VALUES ($1, $2, $3, $4, $5)
+       (titulo, categoria, ano, descricao, capa, temporadas)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [
-        titulo,
+        String(titulo).trim(),
         categoria,
-        ano || null,
+        ano ? Number(ano) : null,
         descricao || "",
-        capa || ""
+        capa || "",
+        JSON.stringify(temporadas || [])
       ]
     );
 
     res.status(201).json(resultado.rows[0]);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
-      erro: "Erro ao cadastrar."
+      erro: "Erro ao cadastrar conteúdo."
     });
   }
 });
 
-// EDITAR
+// EDITAR CONTEÚDO
 app.put("/api/catalogo/:id", protegerAdmin, async (req, res) => {
   try {
-    const { titulo, categoria, ano, descricao, capa } = req.body;
+    const erro = validarConteudo(req.body);
 
-    if (!titulo || !categoria) {
-      return res.status(400).json({
-        erro: "Título e categoria são obrigatórios."
-      });
+    if (erro) {
+      return res.status(400).json({ erro });
     }
+
+    const {
+      titulo,
+      categoria,
+      ano,
+      descricao,
+      capa,
+      temporadas
+    } = req.body;
 
     const resultado = await pool.query(
       `UPDATE catalogo
-       SET titulo=$1, categoria=$2, ano=$3,
-           descricao=$4, capa=$5
-       WHERE id=$6 RETURNING *`,
+       SET titulo = $1,
+           categoria = $2,
+           ano = $3,
+           descricao = $4,
+           capa = $5,
+           temporadas = $6
+       WHERE id = $7
+       RETURNING *`,
       [
-        titulo,
+        String(titulo).trim(),
         categoria,
-        ano || null,
+        ano ? Number(ano) : null,
         descricao || "",
         capa || "",
+        JSON.stringify(temporadas || []),
         req.params.id
       ]
     );
@@ -199,17 +268,19 @@ app.put("/api/catalogo/:id", protegerAdmin, async (req, res) => {
 
     res.json(resultado.rows[0]);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
-      erro: "Erro ao editar."
+      erro: "Erro ao editar conteúdo."
     });
   }
 });
 
-// EXCLUIR
+// EXCLUIR CONTEÚDO
 app.delete("/api/catalogo/:id", protegerAdmin, async (req, res) => {
   try {
     const resultado = await pool.query(
-      "DELETE FROM catalogo WHERE id=$1 RETURNING id",
+      "DELETE FROM catalogo WHERE id = $1 RETURNING id",
       [req.params.id]
     );
 
@@ -223,8 +294,10 @@ app.delete("/api/catalogo/:id", protegerAdmin, async (req, res) => {
       mensagem: "Conteúdo excluído."
     });
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
-      erro: "Erro ao excluir."
+      erro: "Erro ao excluir conteúdo."
     });
   }
 });
@@ -233,10 +306,16 @@ app.delete("/api/catalogo/:id", protegerAdmin, async (req, res) => {
 iniciarBanco()
   .then(() => {
     app.listen(PORT, "0.0.0.0", () => {
-      console.log("NEXUS MEDIA iniciado na porta " + PORT);
+      console.log(
+        "NEXUS MEDIA API iniciado na porta " + PORT
+      );
     });
   })
   .catch(error => {
-    console.error("Erro ao iniciar:", error.message);
+    console.error(
+      "Erro ao iniciar servidor:",
+      error.message
+    );
+
     process.exit(1);
   });
