@@ -3,44 +3,52 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEXUS MEDIA - Painel ADM</title>
-
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#090d18;color:#fff;font-family:Arial,sans-serif}
-header{padding:22px;background:#111a2b;border-bottom:1px solid #26344c}
-header h1{margin:0;color:#55d6ff;letter-spacing:2px}
-header p{color:#9aabc4;margin:7px 0 0}
-main{max-width:950px;margin:25px auto;padding:15px}
-.card{background:#121c2e;border:1px solid #263852;border-radius:15px;padding:20px;margin-bottom:18px}
-h2{margin-top:0;color:#55d6ff}
-input,textarea,select{width:100%;padding:13px;margin:7px 0 13px;background:#091322;color:white;border:1px solid #344763;border-radius:8px;font-size:15px}
-textarea{min-height:90px;resize:vertical}
-button{padding:12px 17px;border:0;border-radius:8px;background:#16a9d5;color:white;font-weight:bold;cursor:pointer;margin:4px}
+body{margin:0;background:#080d18;color:#fff;font-family:Arial,sans-serif}
+header{padding:22px;background:#111d32;border-bottom:2px solid #16b9e8}
+header h1{margin:0;color:#42d5ff;letter-spacing:2px}
+header p{color:#aabbd0;margin-bottom:0}
+main{max-width:950px;margin:auto;padding:15px}
+.card{background:#121e32;padding:18px;border-radius:14px;margin:18px 0;border:1px solid #293c58}
+h2{color:#42d5ff;margin-top:0}
+label{display:block;margin-top:12px;color:#dce9f8}
+input,textarea,select{
+width:100%;padding:13px;margin:7px 0 13px;
+background:#081426;color:white;border:1px solid #354b69;
+border-radius:8px;font-size:15px
+}
+textarea{min-height:100px;resize:vertical}
+button{border:0;border-radius:8px;padding:12px 16px;margin:4px;background:#079fc9;color:white;font-weight:bold}
 button:disabled{opacity:.5}
-.danger{background:#d83d52}
-.secondary{background:#344763}
-.item{display:flex;gap:14px;align-items:center;border-bottom:1px solid #293950;padding:13px 0}
+.secondary{background:#40536c}
+.danger{background:#d83c52}
+.item{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #35445b;align-items:center}
 .item img{width:65px;height:90px;object-fit:cover;border-radius:7px;background:#26344c}
-.item-info{flex:1;min-width:0}
-.item-info strong{display:block;overflow-wrap:anywhere}
-.item-info small{color:#9aabc4}
+.info{flex:1;min-width:0;overflow-wrap:anywhere}
+.info small{display:block;color:#aabbd0;margin-top:5px}
 .actions{display:flex;flex-wrap:wrap}
 .hidden{display:none!important}
-#mensagem,#loginMsg{padding:10px;color:#55d6ff}
+#mensagem,#loginMsg{padding:10px;color:#49d6ff}
 .erro{color:#ff7185!important}
+#preview{max-width:130px;max-height:180px;object-fit:cover;border-radius:8px}
 @media(max-width:550px){
-.item{align-items:flex-start}
+.item{align-items:flex-start;flex-wrap:wrap}
 .actions button{padding:9px;font-size:12px}
 }
 </style>
 </head>
-
 <body>
+
 <header>
 <h1>NEXUS MEDIA</h1>
-<p>Painel de gerenciamento de conteúdo</p>
+<p>Painel de gerenciamento de filmes, séries e animes</p>
 </header>
 
 <main>
@@ -57,7 +65,6 @@ button:disabled{opacity:.5}
 
 <div class="card">
 <h2 id="formTitulo">＋ Adicionar conteúdo</h2>
-
 <input type="hidden" id="id">
 
 <label>Título</label>
@@ -71,21 +78,34 @@ button:disabled{opacity:.5}
 </select>
 
 <label>Ano</label>
-<input id="ano" type="number" placeholder="2026">
+<input id="ano" type="number" min="1888" max="2200" placeholder="2026">
 
-<label>Endereço da imagem da capa</label>
+<label>Descrição / Sinopse</label>
+<textarea id="descricao" placeholder="Escreva a descrição do conteúdo..."></textarea>
+
+<label>Link da capa</label>
 <input id="capa" type="url" placeholder="https://site.com/capa.jpg">
 
-<label>Descrição</label>
-<textarea id="descricao" placeholder="Descrição do conteúdo..."></textarea>
+<label>Ou escolher capa do celular</label>
+<input id="arquivoCapa" type="file" accept="image/*">
+<img id="preview" class="hidden" alt="Prévia da capa">
 
-<button onclick="salvar()">Salvar conteúdo</button>
-<button class="secondary" onclick="limpar()">Limpar</button>
+<div id="areaTemporadas">
+<h2>📺 Temporadas e episódios</h2>
+<p>Para séries e animes, coloque um episódio por linha:</p>
+<textarea id="episodios" placeholder="Temporada 1 | Episódio 1 | Primeiro episódio | https://link-autorizado
+Temporada 1 | Episódio 2 | Segundo episódio | https://link-autorizado
+Temporada 2 | Episódio 1 | Novo episódio | https://link-autorizado"></textarea>
+<p><small>Formato: Temporada | Episódio | Nome | Link autorizado. Os links são opcionais.</small></p>
+</div>
+
+<button id="salvarBtn" onclick="salvar()">Salvar conteúdo</button>
+<button class="secondary" onclick="limpar()">Limpar formulário</button>
 </div>
 
 <div class="card">
 <h2>🎬 Catálogo</h2>
-<input id="busca" placeholder="Buscar conteúdo..." oninput="carregar()">
+<input id="busca" placeholder="Buscar por título..." oninput="carregar()">
 
 <select id="filtro" onchange="carregar()">
 <option value="">Todas as categorias</option>
@@ -107,176 +127,212 @@ button:disabled{opacity:.5}
 "use strict";
 
 let token = "";
-let temporizador = null;
+let capaBase64 = "";
 
 const $ = id => document.getElementById(id);
 
 function mensagem(texto, erro=false){
   $("mensagem").textContent = texto;
-  $("mensagem").classList.toggle("erro", erro);
+  $("mensagem").classList.toggle("erro",erro);
 }
 
-async function entrar(){
-  const valor = $("token").value.trim();
+$("categoria").addEventListener("change",()=>{
+  $("areaTemporadas").classList.toggle(
+    "hidden",
+    $("categoria").value === "filme"
+  );
+});
 
-  if(!valor){
-    $("loginMsg").textContent = "Digite sua senha.";
+$("arquivoCapa").addEventListener("change",async()=>{
+  const arquivo = $("arquivoCapa").files[0];
+
+  if(!arquivo) return;
+
+  if(!arquivo.type.startsWith("image/")){
+    mensagem("Escolha um arquivo de imagem.",true);
     return;
   }
 
-  const botao = $("entrarBtn");
-  botao.disabled = true;
-  $("loginMsg").textContent = "Verificando acesso...";
+  if(arquivo.size > 4 * 1024 * 1024){
+    mensagem("A imagem deve ter no máximo 4 MB.",true);
+    $("arquivoCapa").value="";
+    return;
+  }
 
   try{
-    const resposta = await fetch("/api/admin/verificar", {
-      method: "GET",
-      headers: {
-        "Authorization": "Bearer " + valor
-      },
-      cache: "no-store"
+    capaBase64 = await new Promise((resolve,reject)=>{
+      const leitor = new FileReader();
+      leitor.onload=()=>resolve(leitor.result);
+      leitor.onerror=()=>reject(new Error("Falha ao ler imagem."));
+      leitor.readAsDataURL(arquivo);
+    });
+
+    $("preview").src=capaBase64;
+    $("preview").classList.remove("hidden");
+    $("capa").value="";
+    mensagem("Imagem selecionada.");
+  }catch(e){
+    mensagem(e.message,true);
+  }
+});
+
+async function entrar(){
+  const valor=$("token").value.trim();
+
+  if(!valor){
+    $("loginMsg").textContent="Digite sua senha.";
+    return;
+  }
+
+  $("entrarBtn").disabled=true;
+  $("loginMsg").textContent="Verificando acesso...";
+
+  try{
+    const resposta=await fetch("/api/admin/verificar",{
+      headers:{"Authorization":"Bearer "+valor},
+      cache:"no-store"
     });
 
     if(!resposta.ok){
-      $("loginMsg").textContent =
-        resposta.status === 401
-        ? "Senha incorreta."
-        : "Erro ao verificar acesso: " + resposta.status;
+      $("loginMsg").textContent=
+        resposta.status===401
+        ?"Senha incorreta."
+        :"Erro ao verificar acesso: "+resposta.status;
       return;
     }
 
-    const dados = await resposta.json();
+    const dados=await resposta.json();
 
-    if(dados.autenticado !== true){
-      $("loginMsg").textContent = "Resposta de autenticação inválida.";
+    if(dados.autenticado!==true){
+      $("loginMsg").textContent="Resposta de autenticação inválida.";
       return;
     }
 
-    token = valor;
-
+    token=valor;
     $("login").classList.add("hidden");
     $("painel").classList.remove("hidden");
-    $("loginMsg").textContent = "";
-
+    $("loginMsg").textContent="";
     await carregar();
 
   }catch(e){
-    $("loginMsg").textContent = "Erro de conexão com o servidor.";
+    $("loginMsg").textContent="Erro de conexão com o servidor.";
   }finally{
-    botao.disabled = false;
+    $("entrarBtn").disabled=false;
   }
 }
 
 function sair(){
-  token = "";
-  clearTimeout(temporizador);
-
+  token="";
   $("painel").classList.add("hidden");
   $("login").classList.remove("hidden");
-  $("token").value = "";
-  $("lista").innerHTML = "";
+  $("token").value="";
+  $("lista").innerHTML="";
   mensagem("");
 }
 
-async function requisicao(url, opcoes={}){
-  const cabecalhos = {
-    ...(opcoes.headers || {}),
-    "Authorization": "Bearer " + token
+async function requisicao(url,opcoes={}){
+  const headers={
+    ...(opcoes.headers||{}),
+    "Authorization":"Bearer "+token
   };
 
   if(opcoes.body){
-    cabecalhos["Content-Type"] = "application/json";
+    headers["Content-Type"]="application/json";
   }
 
   return fetch(url,{
     ...opcoes,
-    headers: cabecalhos,
-    cache: "no-store"
+    headers,
+    cache:"no-store"
   });
 }
 
 async function carregar(){
+  $("lista").textContent="Carregando catálogo...";
+
   try{
-    const busca = $("busca").value.trim();
-    const categoria = $("filtro").value;
+    const resposta=await requisicao("/api/catalogo");
 
-    const params = new URLSearchParams();
-
-    if(busca) params.set("busca",busca);
-    if(categoria) params.set("categoria",categoria);
-
-    const resposta = await requisicao(
-      "/api/catalogo?" + params.toString()
-    );
-
-    if(resposta.status === 401){
-      alert("Sua autorização expirou.");
+    if(resposta.status===401){
       sair();
+      alert("Acesso não autorizado.");
       return;
     }
 
     if(!resposta.ok){
-      throw new Error("Erro ao carregar catálogo.");
+      throw new Error("Não foi possível carregar o catálogo.");
     }
 
-    const dados = await resposta.json();
+    const dados=await resposta.json();
+    const busca=$("busca").value.trim().toLowerCase();
+    const filtro=$("filtro").value;
 
-    const itens = Array.isArray(dados)
-      ? dados
-      : Array.isArray(dados.resultados)
-        ? dados.resultados
-        : [];
+    const itens=Array.isArray(dados)?dados:[];
 
-    mostrarLista(itens);
+    const filtrados=itens.filter(item=>{
+      const combinaTitulo=(item.titulo||"").toLowerCase().includes(busca);
+      const combinaCategoria=!filtro||item.categoria===filtro;
+      return combinaTitulo&&combinaCategoria;
+    });
+
+    mostrarLista(filtrados);
 
   }catch(e){
-    $("lista").textContent = e.message;
+    $("lista").textContent=e.message;
   }
 }
 
 function mostrarLista(itens){
-  const lista = $("lista");
-  lista.innerHTML = "";
+  const lista=$("lista");
+  lista.innerHTML="";
 
   if(!itens.length){
-    lista.textContent = "Nenhum conteúdo encontrado.";
+    lista.textContent="Nenhum conteúdo encontrado.";
     return;
   }
 
   itens.forEach(item=>{
-    const div = document.createElement("div");
-    div.className = "item";
+    const div=document.createElement("div");
+    div.className="item";
 
-    const img = document.createElement("img");
-    img.src = item.capa || "";
-    img.alt = "Capa";
-    img.onerror = ()=> img.style.display = "none";
+    const img=document.createElement("img");
+    img.alt="Capa";
+    img.src=item.capa||"";
+    img.onerror=()=>{img.style.display="none"};
 
-    const info = document.createElement("div");
-    info.className = "item-info";
+    const info=document.createElement("div");
+    info.className="info";
 
-    const titulo = document.createElement("strong");
-    titulo.textContent = item.titulo || "Sem título";
+    const titulo=document.createElement("strong");
+    titulo.textContent=item.titulo||"Sem título";
 
-    const detalhe = document.createElement("small");
-    detalhe.textContent =
-      (item.categoria || "") + " • " +
-      (item.ano || "Ano não informado");
+    const detalhe=document.createElement("small");
+    detalhe.textContent=(item.categoria||"")+" • "+(item.ano||"Ano não informado");
 
-    info.append(titulo,detalhe);
+    const temporadas=Array.isArray(item.temporadas)?item.temporadas:[];
+    const total=temporadas.reduce(
+      (s,t)=>s+(Array.isArray(t.episodios)?t.episodios.length:0),0
+    );
 
-    const acoes = document.createElement("div");
-    acoes.className = "actions";
+    const contagem=document.createElement("small");
+    contagem.textContent=temporadas.length
+      ?temporadas.length+" temporada(s), "+total+" episódio(s)"
+      :"";
 
-    const editar = document.createElement("button");
-    editar.className = "secondary";
-    editar.textContent = "Editar";
-    editar.onclick = ()=> editarItem(item);
+    info.append(titulo,detalhe,contagem);
 
-    const excluir = document.createElement("button");
-    excluir.className = "danger";
-    excluir.textContent = "Excluir";
-    excluir.onclick = ()=> excluirItem(item.id);
+    const acoes=document.createElement("div");
+    acoes.className="actions";
+
+    const editar=document.createElement("button");
+    editar.className="secondary";
+    editar.textContent="Editar";
+    editar.onclick=()=>editarItem(item);
+
+    const excluir=document.createElement("button");
+    excluir.className="danger";
+    excluir.textContent="Excluir";
+    excluir.onclick=()=>excluirItem(item.id);
 
     acoes.append(editar,excluir);
     div.append(img,info,acoes);
@@ -284,64 +340,133 @@ function mostrarLista(itens){
   });
 }
 
+function lerTemporadas(texto){
+  const mapa=new Map();
+
+  texto.split("\n").forEach(linha=>{
+    if(!linha.trim()) return;
+
+    const partes=linha.split("|").map(p=>p.trim());
+
+    if(partes.length<3){
+      throw new Error("Linha inválida. Use Temporada | Episódio | Nome | Link.");
+    }
+
+    const numeroTemporada=partes[0].match(/\d+/);
+    const numeroEpisodio=partes[1].match(/\d+/);
+
+    if(!numeroTemporada||!numeroEpisodio){
+      throw new Error("Informe os números da temporada e do episódio.");
+    }
+
+    const nT=Number(numeroTemporada[0]);
+    const nE=Number(numeroEpisodio[0]);
+
+    if(!mapa.has(nT)){
+      mapa.set(nT,{numero:nT,episodios:[]});
+    }
+
+    mapa.get(nT).episodios.push({
+      numero:nE,
+      titulo:partes[2],
+      link:partes[3]||""
+    });
+  });
+
+  return Array.from(mapa.values()).sort((a,b)=>a.numero-b.numero);
+}
+
 function editarItem(item){
-  $("id").value = item.id;
-  $("titulo").value = item.titulo || "";
-  $("categoria").value = item.categoria || "filme";
-  $("ano").value = item.ano || "";
-  $("capa").value = item.capa || "";
-  $("descricao").value = item.descricao || "";
+  $("id").value=item.id;
+  $("titulo").value=item.titulo||"";
+  $("categoria").value=item.categoria||"filme";
+  $("ano").value=item.ano||"";
+  $("descricao").value=item.descricao||"";
+  $("capa").value=item.capa||"";
+  $("arquivoCapa").value="";
+  capaBase64="";
+  $("preview").classList.add("hidden");
 
-  $("formTitulo").textContent = "✏️ Editar conteúdo";
+  const temporadas=Array.isArray(item.temporadas)?item.temporadas:[];
 
+  $("episodios").value=temporadas.flatMap(t=>
+    (t.episodios||[]).map(e=>
+      "Temporada "+t.numero+
+      " | Episódio "+e.numero+
+      " | "+(e.titulo||"")+
+      " | "+(e.link||"")
+    )
+  ).join("\n");
+
+  $("areaTemporadas").classList.toggle(
+    "hidden",item.categoria==="filme"
+  );
+
+  $("formTitulo").textContent="✏️ Editar conteúdo";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
 function limpar(){
-  ["id","titulo","ano","capa","descricao"].forEach(id=>{
-    $(id).value = "";
+  ["id","titulo","ano","descricao","capa","episodios"].forEach(id=>{
+    $(id).value="";
   });
 
-  $("categoria").value = "filme";
-  $("formTitulo").textContent = "＋ Adicionar conteúdo";
+  $("categoria").value="filme";
+  $("areaTemporadas").classList.add("hidden");
+  $("arquivoCapa").value="";
+  $("preview").src="";
+  $("preview").classList.add("hidden");
+  $("formTitulo").textContent="＋ Adicionar conteúdo";
+  capaBase64="";
 }
 
 async function salvar(){
-  const id = $("id").value;
-  const titulo = $("titulo").value.trim();
+  const id=$("id").value;
+  const titulo=$("titulo").value.trim();
 
   if(!titulo){
     mensagem("Digite o título.",true);
     return;
   }
 
-  const dados = {
-    titulo,
-    categoria: $("categoria").value,
-    ano: $("ano").value ? Number($("ano").value) : null,
-    capa: $("capa").value.trim(),
-    descricao: $("descricao").value.trim()
-  };
+  const botao=$("salvarBtn");
+  botao.disabled=true;
+  botao.textContent="Salvando...";
 
   try{
-    const resposta = await requisicao(
-      id ? "/api/catalogo/" + encodeURIComponent(id)
-         : "/api/catalogo",
+    const categoria=$("categoria").value;
+
+    const temporadas=categoria==="filme"
+      ?[]
+      :lerTemporadas($("episodios").value);
+
+    const dados={
+      titulo,
+      categoria,
+      ano:$("ano").value?Number($("ano").value):null,
+      descricao:$("descricao").value.trim(),
+      capa:capaBase64||$("capa").value.trim(),
+      temporadas
+    };
+
+    const resposta=await requisicao(
+      id?"/api/catalogo/"+encodeURIComponent(id):"/api/catalogo",
       {
-        method: id ? "PUT" : "POST",
-        body: JSON.stringify(dados)
+        method:id?"PUT":"POST",
+        body:JSON.stringify(dados)
       }
     );
 
-    if(resposta.status === 401){
+    if(resposta.status===401){
       sair();
       alert("Acesso não autorizado.");
       return;
     }
 
+    const resultado=await resposta.json();
+
     if(!resposta.ok){
-      const erro = await resposta.json();
-      throw new Error(erro.erro || "Erro ao salvar.");
+      throw new Error(resultado.erro||"Erro ao salvar.");
     }
 
     mensagem("Conteúdo salvo com sucesso!");
@@ -350,27 +475,170 @@ async function salvar(){
 
   }catch(e){
     mensagem(e.message,true);
+  }finally{
+    botao.disabled=false;
+    botao.textContent="Salvar conteúdo";
   }
 }
 
 async function excluirItem(id){
-  if(!confirm("Deseja realmente excluir este conteúdo?")) return;
+  if(!confirm("Deseja realmente excluir este conteúdo?"))return;
 
   try{
-    const resposta = await requisicao(
-      "/api/catalogo/" + encodeURIComponent(id),
+    const resposta=await requisicao(
+      "/api/catalogo/"+encodeURIComponent(id),
       {method:"DELETE"}
     );
 
-    if(resposta.status === 401){
+    if(resposta.status===401){
       sair();
       alert("Acesso não autorizado.");
       return;
     }
 
+    const dados=await resposta.json();
+
     if(!resposta.ok){
-      const erro = await resposta.json();
-      throw new Error(erro.erro || "Erro ao excluir.");
+      throw new Error(dados.erro||"Erro ao excluir.");
+    }
+
+    mensagem("Conteúdo excluído.");
+    await carregar();
+
+  }catch(e){
+    mensagem(e.message,true);
+  }
+}
+</script>
+</body>
+</html>
+  return Array.from(mapa.values()).sort((a,b)=>a.numero-b.numero);
+}
+
+function editarItem(item){
+  $("id").value=item.id;
+  $("titulo").value=item.titulo||"";
+  $("categoria").value=item.categoria||"filme";
+  $("ano").value=item.ano||"";
+  $("descricao").value=item.descricao||"";
+  $("capa").value=item.capa||"";
+  $("arquivoCapa").value="";
+  capaBase64="";
+  $("preview").classList.add("hidden");
+
+  const temporadas=Array.isArray(item.temporadas)?item.temporadas:[];
+
+  $("episodios").value=temporadas.flatMap(t=>
+    (t.episodios||[]).map(e=>
+      "Temporada "+t.numero+
+      " | Episódio "+e.numero+
+      " | "+(e.titulo||"")+
+      " | "+(e.link||"")
+    )
+  ).join("\n");
+
+  $("areaTemporadas").classList.toggle(
+    "hidden",item.categoria==="filme"
+  );
+
+  $("formTitulo").textContent="✏️ Editar conteúdo";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function limpar(){
+  ["id","titulo","ano","descricao","capa","episodios"].forEach(id=>{
+    $(id).value="";
+  });
+
+  $("categoria").value="filme";
+  $("areaTemporadas").classList.add("hidden");
+  $("arquivoCapa").value="";
+  $("preview").src="";
+  $("preview").classList.add("hidden");
+  $("formTitulo").textContent="＋ Adicionar conteúdo";
+  capaBase64="";
+}
+
+async function salvar(){
+  const id=$("id").value;
+  const titulo=$("titulo").value.trim();
+
+  if(!titulo){
+    mensagem("Digite o título.",true);
+    return;
+  }
+
+  const botao=$("salvarBtn");
+  botao.disabled=true;
+  botao.textContent="Salvando...";
+
+  try{
+    const categoria=$("categoria").value;
+
+    const temporadas=categoria==="filme"
+      ?[]
+      :lerTemporadas($("episodios").value);
+
+    const dados={
+      titulo,
+      categoria,
+      ano:$("ano").value?Number($("ano").value):null,
+      descricao:$("descricao").value.trim(),
+      capa:capaBase64||$("capa").value.trim(),
+      temporadas
+    };
+
+    const resposta=await requisicao(
+      id?"/api/catalogo/"+encodeURIComponent(id):"/api/catalogo",
+      {
+        method:id?"PUT":"POST",
+        body:JSON.stringify(dados)
+      }
+    );
+
+    if(resposta.status===401){
+      sair();
+      alert("Acesso não autorizado.");
+      return;
+    }
+
+    const resultado=await resposta.json();
+
+    if(!resposta.ok){
+      throw new Error(resultado.erro||"Erro ao salvar.");
+    }
+
+    mensagem("Conteúdo salvo com sucesso!");
+    limpar();
+    await carregar();
+
+  }catch(e){
+    mensagem(e.message,true);
+  }finally{
+    botao.disabled=false;
+    botao.textContent="Salvar conteúdo";
+  }
+}
+
+async function excluirItem(id){
+  if(!confirm("Deseja realmente excluir este conteúdo?"))return;
+
+  try{
+    const resposta=await requisicao(
+      "/api/catalogo/"+encodeURIComponent(id),
+      {method:"DELETE"}
+    );
+
+    if(resposta.status===401){
+      sair();
+      alert("Acesso não autorizado.");
+      return;
+    }
+
+    const dados=await resposta.json();
+
+    if(!resposta.ok){
+      throw new Error(dados.erro||"Erro ao excluir.");
     }
 
     mensagem("Conteúdo excluído.");
