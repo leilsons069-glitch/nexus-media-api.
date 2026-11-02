@@ -52,8 +52,13 @@ function protegerAdmin(req, res, next) {
   next();
 }
 
-// PÁGINA INICIAL
+// SITE PÚBLICO
 app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public.html"));
+});
+
+// PAINEL ADMINISTRATIVO
+app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
@@ -319,3 +324,4 @@ iniciarBanco()
 
     process.exit(1);
   });
+               
