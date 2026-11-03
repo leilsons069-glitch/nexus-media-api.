@@ -3,17 +3,44 @@ const express = require("express");
 const { Pool } = require("pg");
 const path = require("path");
 const crypto = require("crypto");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "6mb" }));
 
+// BANCO DE DADOS
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL
     ? { rejectUnauthorized: false }
     : false
+});
+
+// CLOUDINARY
+cloudinary.config();
+
+// RECEBER ARQUIVOS
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024
+  },
+  fileFilter: (req, file, callback) => {
+    const permitido =
+      /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype) ||
+      /^video\/(mp4|webm|quicktime|x-matroska)$/.test(file.mimetype);
+
+    if (!permitido) {
+      return callback(
+        new Error("Formato não permitido. Use imagem ou vídeo compatível.")
+      );
+    }
+
+    callback(null, true);
+  }
 });
 
 // AUTENTICAÇÃO DO ADMINISTRADOR
@@ -75,7 +102,10 @@ app.get("/api/health", async (req, res) => {
 
     res.json({
       status: "online",
-      banco: "conectado"
+      banco: "conectado",
+      cloudinary: process.env.CLOUDINARY_URL
+        ? "configurado"
+        : "não configurado"
     });
   } catch (error) {
     res.status(500).json({
@@ -84,6 +114,74 @@ app.get("/api/health", async (req, res) => {
     });
   }
 });
+
+// UPLOAD PARA CLOUDINARY
+app.post(
+  "/api/upload",
+  protegerAdmin,
+  (req, res, next) => {
+    upload.single("arquivo")(req, res, error => {
+      if (error) {
+        return res.status(400).json({
+          erro: error.message
+        });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      if (!process.env.CLOUDINARY_URL) {
+        return res.status(503).json({
+          erro: "Cloudinary não configurado no servidor."
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          erro: "Selecione um arquivo."
+        });
+      }
+
+      const ehImagem = req.file.mimetype.startsWith("image/");
+      const tipo = ehImagem ? "image" : "video";
+
+      const pasta = ehImagem
+        ? "nexus-media/capas"
+        : "nexus-media/videos";
+
+      const resultado = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: pasta,
+            resource_type: tipo
+          },
+          (error, resultado) => {
+            if (error) return reject(error);
+            resolve(resultado);
+          }
+        );
+
+        stream.end(req.file.buffer);
+      });
+
+      res.status(201).json({
+        mensagem: "Arquivo enviado com sucesso!",
+        url: resultado.secure_url,
+        public_id: resultado.public_id,
+        tipo: resultado.resource_type,
+        formato: resultado.format
+      });
+
+    } catch (error) {
+      console.error("Erro no Cloudinary:", error);
+
+      res.status(500).json({
+        erro: "Não foi possível enviar o arquivo."
+      });
+    }
+  }
+);
 
 // CRIAR E ATUALIZAR ESTRUTURA DO BANCO
 async function iniciarBanco() {
@@ -99,7 +197,6 @@ async function iniciarBanco() {
     )
   `);
 
-  // Adiciona a coluna sem apagar os conteúdos antigos.
   await pool.query(`
     ALTER TABLE catalogo
     ADD COLUMN IF NOT EXISTS temporadas JSONB
@@ -324,4 +421,3 @@ iniciarBanco()
 
     process.exit(1);
   });
-               
