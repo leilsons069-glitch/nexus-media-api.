@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "express": "^4.21.2",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "cloudinary": "^2.5.1",
+    "multer": "^1.4.5-lts.1"
   }
 }
