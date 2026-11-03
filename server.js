@@ -29,13 +29,22 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024
   },
   fileFilter: (req, file, callback) => {
-    const permitido =
-      /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype) ||
-      /^video\/(mp4|webm|quicktime|x-matroska)$/.test(file.mimetype);
+    const nome = (file.originalname || "").toLowerCase();
+    const mime = (file.mimetype || "").toLowerCase();
 
-    if (!permitido) {
+    const imagem =
+      /^image\/(jpeg|png|webp|gif)$/.test(mime) ||
+      /\.(jpg|jpeg|png|webp|gif)$/.test(nome);
+
+    const video =
+      /^video\/(mp4|webm|quicktime|x-matroska)$/.test(mime) ||
+      /\.(mp4|webm|mov|mkv)$/.test(nome);
+
+    if (!imagem && !video) {
       return callback(
-        new Error("Formato não permitido. Use imagem ou vídeo compatível.")
+        new Error(
+          "Formato inválido. Use JPG, PNG, WEBP, GIF, MP4, WEBM, MOV ou MKV."
+        )
       );
     }
 
@@ -108,6 +117,8 @@ app.get("/api/health", async (req, res) => {
         : "não configurado"
     });
   } catch (error) {
+    console.error("Erro de saúde:", error.message);
+
     res.status(500).json({
       status: "erro",
       banco: "desconectado"
@@ -119,53 +130,76 @@ app.get("/api/health", async (req, res) => {
 app.post(
   "/api/upload",
   protegerAdmin,
+
   (req, res, next) => {
     upload.single("arquivo")(req, res, error => {
       if (error) {
+        console.error("Erro ao receber arquivo:", error);
+
         return res.status(400).json({
           erro: error.message
         });
       }
+
       next();
     });
   },
+
   async (req, res) => {
     try {
       if (!process.env.CLOUDINARY_URL) {
         return res.status(503).json({
-          erro: "Cloudinary não configurado no servidor."
+          erro: "Cloudinary não configurado no Render."
         });
       }
 
       if (!req.file) {
         return res.status(400).json({
-          erro: "Selecione um arquivo."
+          erro: "Nenhum arquivo recebido."
         });
       }
 
-      const ehImagem = req.file.mimetype.startsWith("image/");
+      const nome = (req.file.originalname || "").toLowerCase();
+
+      const ehImagem =
+        req.file.mimetype.startsWith("image/") ||
+        /\.(jpg|jpeg|png|webp|gif)$/.test(nome);
+
       const tipo = ehImagem ? "image" : "video";
 
       const pasta = ehImagem
         ? "nexus-media/capas"
         : "nexus-media/videos";
 
+      console.log("Iniciando upload:", nome, tipo);
+
       const resultado = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
             folder: pasta,
-            resource_type: tipo
+            resource_type: tipo,
+            timeout: 180000
           },
           (error, resultado) => {
-            if (error) return reject(error);
+            if (error) {
+              return reject(error);
+            }
+
             resolve(resultado);
           }
         );
 
+        stream.on("error", reject);
         stream.end(req.file.buffer);
       });
 
-      res.status(201).json({
+      console.log(
+        "Upload concluído:",
+        resultado.public_id
+      );
+
+      return res.status(201).json({
+        sucesso: true,
         mensagem: "Arquivo enviado com sucesso!",
         url: resultado.secure_url,
         public_id: resultado.public_id,
@@ -174,10 +208,11 @@ app.post(
       });
 
     } catch (error) {
-      console.error("Erro no Cloudinary:", error);
+      console.error("ERRO REAL NO UPLOAD:", error);
 
-      res.status(500).json({
-        erro: "Não foi possível enviar o arquivo."
+      return res.status(500).json({
+        erro: error.message ||
+          "Erro ao enviar arquivo para o Cloudinary."
       });
     }
   }
