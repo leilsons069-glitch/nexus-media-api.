@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEXUS MEDIA - Painel ADM</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#080d18;color:#fff;font-family:Arial,sans-serif}
@@ -35,12 +36,21 @@ button:disabled{opacity:.5}
 .erro{color:#ff7185!important}
 #preview{max-width:130px;max-height:180px;object-fit:cover;border-radius:8px}
 small{color:#aabbd0}
+.progresso{
+width:100%;height:8px;background:#26344c;
+border-radius:10px;overflow:hidden;margin:10px 0
+}
+.progresso div{
+height:100%;width:0;background:#16b9e8;
+transition:width .2s
+}
 @media(max-width:550px){
 .item{align-items:flex-start;flex-wrap:wrap}
 .actions button{padding:9px;font-size:12px}
 }
 </style>
 </head>
+
 <body>
 
 <header>
@@ -53,15 +63,24 @@ small{color:#aabbd0}
 <div class="card" id="login">
 <h2>🔐 Acesso administrativo</h2>
 <p>Digite sua senha de administrador.</p>
-<input type="password" id="token" placeholder="Senha de administrador" autocomplete="current-password">
-<button id="entrarBtn" onclick="entrar()">Entrar no painel</button>
+
+<input type="password" id="token"
+placeholder="Senha de administrador"
+autocomplete="current-password">
+
+<button id="entrarBtn" onclick="entrar()">
+Entrar no painel
+</button>
+
 <div id="loginMsg"></div>
 </div>
 
 <div id="painel" class="hidden">
 
 <div class="card">
+
 <h2 id="formTitulo">＋ Adicionar conteúdo</h2>
+
 <input type="hidden" id="id">
 
 <label>Título</label>
@@ -80,36 +99,77 @@ small{color:#aabbd0}
 <label>Descrição / Sinopse</label>
 <textarea id="descricao" placeholder="Escreva a descrição do conteúdo..."></textarea>
 
+<h2>🖼️ Capa</h2>
+
 <label>Link da capa</label>
 <input id="capa" type="url" placeholder="https://site.com/capa.jpg">
 
 <label>Ou escolher capa do celular</label>
 <input id="arquivoCapa" type="file" accept="image/*">
+
+<button type="button" id="uploadCapaBtn"
+onclick="enviarArquivo('arquivoCapa','capa')">
+Enviar capa para Cloudinary
+</button>
+
 <img id="preview" class="hidden" alt="Prévia da capa">
 
 <div id="areaFilme">
+
 <h2>🎬 Reprodução do filme</h2>
+
+<label>Escolher vídeo do celular</label>
+<input id="arquivoVideo" type="file"
+accept="video/mp4,video/webm,video/quicktime">
+
+<button type="button" id="uploadVideoBtn"
+onclick="enviarArquivo('arquivoVideo','linkFilme')">
+Enviar vídeo para Cloudinary
+</button>
+
 <label>Link do vídeo (MP4 ou M3U8)</label>
-<input id="linkFilme" type="url" placeholder="https://site.com/video.mp4">
-<small>Informe um link direto de vídeo autorizado. O link pode terminar em .mp4 ou .m3u8.</small>
+<input id="linkFilme" type="url"
+placeholder="https://site.com/video.mp4">
+
+<small>Informe um link direto de vídeo autorizado.</small>
+
 </div>
 
 <div id="areaTemporadas" class="hidden">
+
 <h2>📺 Temporadas e episódios</h2>
+
 <p>Coloque um episódio por linha:</p>
-<textarea id="episodios" placeholder="Temporada 1 | Episódio 1 | Primeiro episódio | https://link-autorizado.mp4
+
+<textarea id="episodios"
+placeholder="Temporada 1 | Episódio 1 | Primeiro episódio | https://link-autorizado.mp4
 Temporada 1 | Episódio 2 | Segundo episódio | https://link-autorizado.mp4
 Temporada 2 | Episódio 1 | Novo episódio | https://link-autorizado.m3u8"></textarea>
-<p><small>Formato: Temporada | Episódio | Nome | Link autorizado. Os links são opcionais.</small></p>
+
+<p><small>
+Formato: Temporada | Episódio | Nome | Link autorizado.
+Os links são opcionais.
+</small></p>
+
 </div>
 
-<button id="salvarBtn" onclick="salvar()">Salvar conteúdo</button>
-<button class="secondary" onclick="limpar()">Limpar formulário</button>
+<button id="salvarBtn" onclick="salvar()">
+Salvar conteúdo
+</button>
+
+<button class="secondary" onclick="limpar()">
+Limpar formulário
+</button>
+
 </div>
 
 <div class="card">
+
 <h2>🎬 Catálogo</h2>
-<input id="busca" placeholder="Buscar por título..." oninput="carregar()">
+
+<input id="busca"
+placeholder="Buscar por título..."
+oninput="carregar()">
 
 <select id="filtro" onchange="carregar()">
 <option value="">Todas as categorias</option>
@@ -119,12 +179,17 @@ Temporada 2 | Episódio 1 | Novo episódio | https://link-autorizado.m3u8"></tex
 </select>
 
 <div id="lista">Carregando catálogo...</div>
+
 </div>
 
-<button class="danger" onclick="sair()">Sair do painel</button>
+<button class="danger" onclick="sair()">
+Sair do painel
+</button>
+
 </div>
 
 <div id="mensagem"></div>
+
 </main>
 
 <script>
@@ -174,13 +239,96 @@ $("arquivoCapa").addEventListener("change",async()=>{
     $("preview").src=capaBase64;
     $("preview").classList.remove("hidden");
     $("capa").value="";
-    mensagem("Imagem selecionada.");
+    mensagem("Imagem selecionada. Você pode enviá-la ao Cloudinary.");
   }catch(e){
     mensagem(e.message,true);
   }
 });
 
+/* UPLOAD CLOUDINARY */
+
+async function enviarArquivo(campoArquivo,campoDestino){
+
+  const arquivo=$(campoArquivo).files[0];
+
+  if(!arquivo){
+    mensagem("Escolha um arquivo primeiro.",true);
+    return;
+  }
+
+  if(campoArquivo==="arquivoCapa" &&
+     !arquivo.type.startsWith("image/")){
+    mensagem("Escolha uma imagem válida.",true);
+    return;
+  }
+
+  if(campoArquivo==="arquivoVideo" &&
+     !arquivo.type.startsWith("video/")){
+    mensagem("Escolha um vídeo válido.",true);
+    return;
+  }
+
+  if(arquivo.size > 100 * 1024 * 1024){
+    mensagem("O arquivo ultrapassa o limite de 100 MB.",true);
+    return;
+  }
+
+  const botao=$(
+    campoArquivo==="arquivoCapa"
+    ?"uploadCapaBtn"
+    :"uploadVideoBtn"
+  );
+
+  botao.disabled=true;
+  botao.textContent="Enviando arquivo...";
+
+  try{
+
+    const formulario=new FormData();
+    formulario.append("arquivo",arquivo);
+
+    const resposta=await fetch("/api/upload",{
+      method:"POST",
+      headers:{
+        "Authorization":"Bearer "+token
+      },
+      body:formulario
+    });
+
+    const dados=await resposta.json();
+
+    if(!resposta.ok){
+      throw new Error(dados.erro||"Falha no envio.");
+    }
+
+    if(!dados.url){
+      throw new Error("O servidor não retornou o link do arquivo.");
+    }
+
+    $(campoDestino).value=dados.url;
+
+    if(campoDestino==="capa"){
+      $("preview").src=dados.url;
+      $("preview").classList.remove("hidden");
+      capaBase64="";
+    }
+
+    mensagem("Upload concluído! Arquivo enviado ao Cloudinary.");
+
+  }catch(erro){
+    mensagem(erro.message,true);
+  }finally{
+    botao.disabled=false;
+    botao.textContent=
+      "Enviar "+(campoArquivo==="arquivoCapa"?"capa":"vídeo")+
+      " para Cloudinary";
+  }
+}
+
+/* LOGIN */
+
 async function entrar(){
+
   const valor=$("token").value.trim();
 
   if(!valor){
@@ -192,6 +340,7 @@ async function entrar(){
   $("loginMsg").textContent="Verificando acesso...";
 
   try{
+
     const resposta=await fetch("/api/admin/verificar",{
       headers:{"Authorization":"Bearer "+valor},
       cache:"no-store"
@@ -213,9 +362,11 @@ async function entrar(){
     }
 
     token=valor;
+
     $("login").classList.add("hidden");
     $("painel").classList.remove("hidden");
     $("loginMsg").textContent="";
+
     await carregar();
 
   }catch(e){
@@ -226,15 +377,21 @@ async function entrar(){
 }
 
 function sair(){
+
   token="";
+
   $("painel").classList.add("hidden");
   $("login").classList.remove("hidden");
   $("token").value="";
   $("lista").innerHTML="";
+
   mensagem("");
 }
 
+/* REQUISIÇÕES */
+
 async function requisicao(url,opcoes={}){
+
   const headers={
     ...(opcoes.headers||{}),
     "Authorization":"Bearer "+token
@@ -251,10 +408,14 @@ async function requisicao(url,opcoes={}){
   });
 }
 
+/* CARREGAR CATÁLOGO */
+
 async function carregar(){
+
   $("lista").textContent="Carregando catálogo...";
 
   try{
+
     const resposta=await requisicao("/api/catalogo");
 
     if(resposta.status===401){
@@ -273,8 +434,13 @@ async function carregar(){
     const itens=Array.isArray(dados)?dados:[];
 
     const filtrados=itens.filter(item=>{
-      const combinaTitulo=(item.titulo||"").toLowerCase().includes(busca);
-      const combinaCategoria=!filtro||item.categoria===filtro;
+
+      const combinaTitulo=(item.titulo||"")
+        .toLowerCase().includes(busca);
+
+      const combinaCategoria=
+        !filtro||item.categoria===filtro;
+
       return combinaTitulo&&combinaCategoria;
     });
 
@@ -285,7 +451,10 @@ async function carregar(){
   }
 }
 
+/* MOSTRAR CATÁLOGO */
+
 function mostrarLista(itens){
+
   const lista=$("lista");
   lista.innerHTML="";
 
@@ -295,6 +464,7 @@ function mostrarLista(itens){
   }
 
   itens.forEach(item=>{
+
     const div=document.createElement("div");
     div.className="item";
 
@@ -310,14 +480,20 @@ function mostrarLista(itens){
     titulo.textContent=item.titulo||"Sem título";
 
     const detalhe=document.createElement("small");
-    detalhe.textContent=(item.categoria||"")+" • "+(item.ano||"Ano não informado");
+    detalhe.textContent=
+      (item.categoria||"")+" • "+
+      (item.ano||"Ano não informado");
 
-    const temporadas=Array.isArray(item.temporadas)?item.temporadas:[];
+    const temporadas=Array.isArray(item.temporadas)
+      ?item.temporadas:[];
+
     const total=temporadas.reduce(
-      (s,t)=>s+(Array.isArray(t.episodios)?t.episodios.length:0),0
+      (s,t)=>s+(Array.isArray(t.episodios)
+      ?t.episodios.length:0),0
     );
 
     const contagem=document.createElement("small");
+
     contagem.textContent=temporadas.length
       ?temporadas.length+" temporada(s), "+total+" episódio(s)"
       :"";
@@ -343,7 +519,10 @@ function mostrarLista(itens){
   });
 }
 
+/* VALIDAR LINKS */
+
 function validarLink(link){
+
   if(!link) return true;
 
   try{
@@ -354,23 +533,31 @@ function validarLink(link){
   }
 }
 
+/* TEMPORADAS */
+
 function lerTemporadas(texto){
+
   const mapa=new Map();
 
   texto.split("\n").forEach(linha=>{
+
     if(!linha.trim()) return;
 
     const partes=linha.split("|").map(p=>p.trim());
 
     if(partes.length<3){
-      throw new Error("Linha inválida. Use Temporada | Episódio | Nome | Link.");
+      throw new Error(
+        "Linha inválida. Use Temporada | Episódio | Nome | Link."
+      );
     }
 
     const numeroTemporada=partes[0].match(/\d+/);
     const numeroEpisodio=partes[1].match(/\d+/);
 
     if(!numeroTemporada||!numeroEpisodio){
-      throw new Error("Informe os números da temporada e do episódio.");
+      throw new Error(
+        "Informe os números da temporada e do episódio."
+      );
     }
 
     const nT=Number(numeroTemporada[0]);
@@ -392,26 +579,36 @@ function lerTemporadas(texto){
     });
   });
 
-  return Array.from(mapa.values()).sort((a,b)=>a.numero-b.numero);
+  return Array.from(mapa.values())
+    .sort((a,b)=>a.numero-b.numero);
 }
 
+/* EDITAR */
+
 function editarItem(item){
+
   $("id").value=item.id;
   $("titulo").value=item.titulo||"";
   $("categoria").value=item.categoria||"filme";
   $("ano").value=item.ano||"";
   $("descricao").value=item.descricao||"";
   $("capa").value=item.capa||"";
+
   $("arquivoCapa").value="";
+  $("arquivoVideo").value="";
   capaBase64="";
+
   $("preview").classList.add("hidden");
 
-  const temporadas=Array.isArray(item.temporadas)?item.temporadas:[];
+  const temporadas=Array.isArray(item.temporadas)
+    ?item.temporadas:[];
 
   const episodioFilme=temporadas[0]?.episodios?.[0];
 
   $("linkFilme").value=
-    item.categoria==="filme"?(episodioFilme?.link||""):"";
+    item.categoria==="filme"
+    ?(episodioFilme?.link||"")
+    :"";
 
   $("episodios").value=temporadas.flatMap(t=>
     (t.episodios||[]).map(e=>
@@ -425,24 +622,39 @@ function editarItem(item){
   atualizarCategoria();
 
   $("formTitulo").textContent="✏️ Editar conteúdo";
+
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
+/* LIMPAR */
+
 function limpar(){
-  ["id","titulo","ano","descricao","capa","episodios","linkFilme"].forEach(id=>{
+
+  [
+    "id","titulo","ano","descricao",
+    "capa","episodios","linkFilme"
+  ].forEach(id=>{
     $(id).value="";
   });
 
   $("categoria").value="filme";
   atualizarCategoria();
+
   $("arquivoCapa").value="";
+  $("arquivoVideo").value="";
+
   $("preview").src="";
   $("preview").classList.add("hidden");
+
   $("formTitulo").textContent="＋ Adicionar conteúdo";
+
   capaBase64="";
 }
 
+/* SALVAR */
+
 async function salvar(){
+
   const id=$("id").value;
   const titulo=$("titulo").value.trim();
 
@@ -456,14 +668,18 @@ async function salvar(){
   botao.textContent="Salvando...";
 
   try{
+
     const categoria=$("categoria").value;
     let temporadas;
 
     if(categoria==="filme"){
+
       const link=$("linkFilme").value.trim();
 
       if(link&&!validarLink(link)){
-        throw new Error("Informe um link de vídeo HTTP ou HTTPS válido.");
+        throw new Error(
+          "Informe um link de vídeo HTTP ou HTTPS válido."
+        );
       }
 
       temporadas=link?[{
@@ -474,21 +690,32 @@ async function salvar(){
           link:link
         }]
       }]:[];
+
     }else{
+
       temporadas=lerTemporadas($("episodios").value);
     }
 
     const dados={
+
       titulo,
       categoria,
-      ano:$("ano").value?Number($("ano").value):null,
+
+      ano:$("ano").value
+        ?Number($("ano").value)
+        :null,
+
       descricao:$("descricao").value.trim(),
+
       capa:capaBase64||$("capa").value.trim(),
+
       temporadas
     };
 
     const resposta=await requisicao(
-      id?"/api/catalogo/"+encodeURIComponent(id):"/api/catalogo",
+      id
+      ?"/api/catalogo/"+encodeURIComponent(id)
+      :"/api/catalogo",
       {
         method:id?"PUT":"POST",
         body:JSON.stringify(dados)
@@ -508,21 +735,29 @@ async function salvar(){
     }
 
     mensagem("Conteúdo salvo com sucesso!");
+
     limpar();
     await carregar();
 
   }catch(e){
+
     mensagem(e.message,true);
+
   }finally{
+
     botao.disabled=false;
     botao.textContent="Salvar conteúdo";
   }
 }
 
+/* EXCLUIR */
+
 async function excluirItem(id){
+
   if(!confirm("Deseja realmente excluir este conteúdo?"))return;
 
   try{
+
     const resposta=await requisicao(
       "/api/catalogo/"+encodeURIComponent(id),
       {method:"DELETE"}
@@ -541,14 +776,18 @@ async function excluirItem(id){
     }
 
     mensagem("Conteúdo excluído.");
+
     await carregar();
 
   }catch(e){
+
     mensagem(e.message,true);
   }
 }
 
 atualizarCategoria();
+
 </script>
+
 </body>
 </html>
